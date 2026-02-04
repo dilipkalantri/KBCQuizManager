@@ -1,0 +1,465 @@
+@page "/admin/play"
+@inject IAuthService AuthService
+@inject IGameService GameService
+@inject IQuestionService QuestionService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<PageTitle>Play KBC - Quiz Manager</PageTitle>
+
+@if (!_isPlaying)
+{
+    <!-- Start Screen -->
+    <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 40px 20px;">
+        <div style="font-size: 80px; margin-bottom: 20px;">🎮</div>
+        <h1 style="color: white; font-size: 32px; margin: 0 0 10px 0;">Kaun Banega Crorepati</h1>
+        <p style="color: #9ca3af; margin: 0 0 30px 0;">Answer 15 questions to win ₹7 Crore!</p>
+        
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: left;">
+            <h3 style="color: white; margin: 0 0 15px 0;">Enter Player Name</h3>
+            <input @bind="_playerName" placeholder="Your name" style="width: 100%; padding: 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 16px; margin-bottom: 15px;" />
+            
+            <h3 style="color: white; margin: 20px 0 15px 0;">Question Availability</h3>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                @for (int i = 1; i <= 15; i++)
+                {
+                    var level = i;
+                    var count = _levelCounts.GetValueOrDefault(level, 0);
+                    <span style="padding: 5px 10px; border-radius: 6px; font-size: 11px; background: @(count > 0 ? "#10b981" : "#ef4444"); color: white;">
+                        L@level: @count
+                    </span>
+                }
+            </div>
+            @if (_missingLevels.Any())
+            {
+                <p style="color: #ef4444; font-size: 13px; margin: 15px 0 0 0;">⚠️ Missing questions for levels: @string.Join(", ", _missingLevels)</p>
+            }
+        </div>
+        
+        <button @onclick="StartGame" disabled="@(string.IsNullOrWhiteSpace(_playerName) || _missingLevels.Any())" 
+                style="background: #7c3aed; color: white; border: none; padding: 15px 50px; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer; opacity: @(string.IsNullOrWhiteSpace(_playerName) || _missingLevels.Any() ? "0.5" : "1");">
+            ▶️ Start Game
+        </button>
+        
+        <div style="margin-top: 20px;">
+            <a href="/admin/game-history" style="color: #7c3aed; text-decoration: none;">📊 View Game History</a>
+        </div>
+    </div>
+}
+else if (_gameSession != null)
+{
+    @if (_gameFinished)
+    {
+        <!-- Game Over Screen -->
+        <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 40px 20px;">
+            <div style="font-size: 100px; margin-bottom: 20px;">@(_gameSession.Status == GameStatus.Won ? "🏆" : "😔")</div>
+            <h1 style="color: white; font-size: 36px; margin: 0 0 10px 0;">
+                @(_gameSession.Status == GameStatus.Won ? "Congratulations!" : "Game Over")
+            </h1>
+            <p style="color: #9ca3af; font-size: 18px; margin: 0 0 30px 0;">@_playerName</p>
+            
+            <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); border: 2px solid #fbbf24; border-radius: 16px; padding: 30px; margin-bottom: 30px;">
+                <p style="color: #9ca3af; margin: 0 0 10px 0;">You Won</p>
+                <h2 style="color: #fbbf24; font-size: 48px; margin: 0;">@KBCPrizeStructure.FormatPrize(_gameSession.FinalPrize)</h2>
+                <p style="color: #6b7280; margin: 15px 0 0 0;">
+                    Reached Level @_gameSession.CurrentLevel | @_gameSession.CorrectAnswers/@_gameSession.QuestionsAnswered Correct | Time: @_gameSession.GetDuration()
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button @onclick="ResetGame" style="background: #7c3aed; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                    🔄 Play Again
+                </button>
+                <a href="/admin/game-history" style="background: transparent; border: 1px solid #2a3f5f; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none;">
+                    📊 View History
+                </a>
+            </div>
+        </div>
+    }
+    else if (_currentQuestion != null)
+    {
+        <!-- Game Play Screen -->
+        <div style="max-width: 900px; margin: 0 auto;">
+            <!-- Top Bar: Level, Timer, Prize -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="background: #7c3aed; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600;">
+                        Level @_gameSession.CurrentLevel / 15
+                    </span>
+                    <span style="color: #9ca3af;">@_playerName</span>
+                </div>
+                
+                <!-- Timer -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; border: 3px solid @(_timeRemaining <= 10 ? "#ef4444" : "#7c3aed"); display: flex; align-items: center; justify-content: center;">
+                        <span style="color: @(_timeRemaining <= 10 ? "#ef4444" : "white"); font-size: 24px; font-weight: 700;">@_timeRemaining</span>
+                    </div>
+                </div>
+                
+                <div style="text-align: right;">
+                    <p style="color: #9ca3af; margin: 0; font-size: 12px;">Prize</p>
+                    <p style="color: #fbbf24; margin: 0; font-size: 24px; font-weight: 700;">@KBCPrizeStructure.FormatPrize(_currentQuestion.GetPrizeAmount())</p>
+                </div>
+            </div>
+            
+            <!-- Prize Ladder (Side) -->
+            <div style="display: grid; grid-template-columns: 1fr 200px; gap: 20px;">
+                <div>
+                    <!-- Question Card -->
+                    <div style="background: linear-gradient(180deg, #0f172a, #1e293b); border: 2px solid #7c3aed; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
+                        <h2 style="color: white; font-size: 20px; text-align: center; margin: 0; line-height: 1.6;">@_currentQuestion.QuestionText</h2>
+                    </div>
+                    
+                    <!-- Options -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                        @foreach (var opt in GetCurrentOptions())
+                        {
+                            var isHidden = _hiddenOptions.Contains(opt.Answer);
+                            var isSelected = _selectedAnswer == opt.Answer;
+                            var isCorrect = _showAnswer && opt.Answer == _currentQuestion.CorrectAnswer;
+                            var isWrong = _showAnswer && isSelected && !isCorrect;
+                            
+                            <button @onclick="() => SelectAnswer(opt.Answer)" disabled="@(_showAnswer || isHidden)"
+                                    style="padding: 18px 20px; border-radius: 12px; text-align: left; cursor: @(_showAnswer || isHidden ? "default" : "pointer"); opacity: @(isHidden ? "0.3" : "1");
+                                           background: @(isCorrect ? "rgba(16, 185, 129, 0.3)" : isWrong ? "rgba(239, 68, 68, 0.3)" : isSelected ? "rgba(124, 58, 237, 0.3)" : "#1a1a2e");
+                                           border: 2px solid @(isCorrect ? "#10b981" : isWrong ? "#ef4444" : isSelected ? "#7c3aed" : "#2a3f5f");
+                                           color: white; font-size: 16px; transition: all 0.2s;">
+                                <strong style="color: @(isCorrect ? "#10b981" : isWrong ? "#ef4444" : "#7c3aed"); margin-right: 10px;">@opt.Label.</strong>
+                                @opt.Text
+                                @if (isCorrect) { <span style="float: right; color: #10b981;">✓</span> }
+                                @if (isWrong) { <span style="float: right; color: #ef4444;">✗</span> }
+                            </button>
+                        }
+                    </div>
+                    
+                    <!-- Lifelines -->
+                    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                        <p style="color: #9ca3af; font-size: 12px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Lifelines</p>
+                        <div style="display: flex; gap: 10px;">
+                            <button @onclick="UseFiftyFifty" disabled="@(_gameSession.FiftyFiftyUsed || _showAnswer)" 
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.FiftyFiftyUsed ? "#4b5563" : "#f59e0b"); background: @(_gameSession.FiftyFiftyUsed ? "#1a1a2e" : "rgba(245, 158, 11, 0.1)"); color: @(_gameSession.FiftyFiftyUsed ? "#4b5563" : "#f59e0b"); opacity: @(_gameSession.FiftyFiftyUsed ? "0.5" : "1");">
+                                50:50
+                            </button>
+                            <button @onclick="UsePhoneAFriend" disabled="@(_gameSession.PhoneAFriendUsed || _showAnswer)"
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.PhoneAFriendUsed ? "#4b5563" : "#3b82f6"); background: @(_gameSession.PhoneAFriendUsed ? "#1a1a2e" : "rgba(59, 130, 246, 0.1)"); color: @(_gameSession.PhoneAFriendUsed ? "#4b5563" : "#3b82f6"); opacity: @(_gameSession.PhoneAFriendUsed ? "0.5" : "1");">
+                                📞 Phone
+                            </button>
+                            <button @onclick="UseAudiencePoll" disabled="@(_gameSession.AudiencePollUsed || _showAnswer)"
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.AudiencePollUsed ? "#4b5563" : "#10b981"); background: @(_gameSession.AudiencePollUsed ? "#1a1a2e" : "rgba(16, 185, 129, 0.1)"); color: @(_gameSession.AudiencePollUsed ? "#4b5563" : "#10b981"); opacity: @(_gameSession.AudiencePollUsed ? "0.5" : "1");">
+                                👥 Audience
+                            </button>
+                            <button @onclick="UseExpertAdvice" disabled="@(_gameSession.ExpertAdviceUsed || _showAnswer)"
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.ExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); background: @(_gameSession.ExpertAdviceUsed ? "#1a1a2e" : "rgba(139, 92, 246, 0.1)"); color: @(_gameSession.ExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); opacity: @(_gameSession.ExpertAdviceUsed ? "0.5" : "1");">
+                                🎓 Expert
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Lifeline Result -->
+                    @if (!string.IsNullOrEmpty(_lifelineResult))
+                    {
+                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                            <p style="color: #3b82f6; margin: 0;">@_lifelineResult</p>
+                        </div>
+                    }
+                    
+                    @if (_audiencePoll != null)
+                    {
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                            <p style="color: #10b981; margin: 0 0 10px 0; font-weight: 600;">Audience Poll Results:</p>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                                <div style="text-align: center;">
+                                    <div style="height: @(_audiencePoll.PercentageA)px; max-height: 60px; background: #10b981; border-radius: 4px; margin-bottom: 5px;"></div>
+                                    <span style="color: white;">A: @_audiencePoll.PercentageA%</span>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="height: @(_audiencePoll.PercentageB)px; max-height: 60px; background: #10b981; border-radius: 4px; margin-bottom: 5px;"></div>
+                                    <span style="color: white;">B: @_audiencePoll.PercentageB%</span>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="height: @(_audiencePoll.PercentageC)px; max-height: 60px; background: #10b981; border-radius: 4px; margin-bottom: 5px;"></div>
+                                    <span style="color: white;">C: @_audiencePoll.PercentageC%</span>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="height: @(_audiencePoll.PercentageD)px; max-height: 60px; background: #10b981; border-radius: 4px; margin-bottom: 5px;"></div>
+                                    <span style="color: white;">D: @_audiencePoll.PercentageD%</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        @if (_selectedAnswer.HasValue && !_showAnswer)
+                        {
+                            <button @onclick="LockAnswer" style="background: #f59e0b; color: white; border: none; padding: 15px 40px; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer;">
+                                🔒 Lock Answer
+                            </button>
+                        }
+                        @if (_showAnswer)
+                        {
+                            @if (_isCorrect)
+                            {
+                                <button @onclick="NextQuestion" style="background: #10b981; color: white; border: none; padding: 15px 40px; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer;">
+                                    @(_gameSession.CurrentLevel >= 15 ? "🏆 Claim Prize" : "Next Question →")
+                                </button>
+                            }
+                            else
+                            {
+                                <button @onclick="EndGame" style="background: #ef4444; color: white; border: none; padding: 15px 40px; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer;">
+                                    End Game
+                                </button>
+                            }
+                        }
+                        @if (!_showAnswer)
+                        {
+                            <button @onclick="QuitGame" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer;">
+                                Quit & Take @KBCPrizeStructure.FormatPrize(_gameSession.CurrentPrize)
+                            </button>
+                        }
+                    </div>
+                </div>
+                
+                <!-- Prize Ladder -->
+                <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 15px;">
+                    <p style="color: #9ca3af; font-size: 11px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Prize Ladder</p>
+                    @for (int i = 15; i >= 1; i--)
+                    {
+                        var level = i;
+                        var isCurrent = level == _gameSession.CurrentLevel;
+                        var isPassed = level < _gameSession.CurrentLevel;
+                        var isMilestone = level == 5 || level == 10;
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; background: @(isCurrent ? "#7c3aed" : isPassed ? "rgba(16, 185, 129, 0.2)" : "transparent"); border: @(isMilestone ? "1px solid #fbbf24" : "none");">
+                            <span style="color: @(isCurrent ? "white" : isPassed ? "#10b981" : "#6b7280"); font-size: 12px;">@level</span>
+                            <span style="color: @(isCurrent ? "white" : isPassed ? "#10b981" : isMilestone ? "#fbbf24" : "#9ca3af"); font-size: 12px; font-weight: @(isMilestone ? "600" : "400");">
+                                @KBCPrizeStructure.FormatPrize(KBCPrizeStructure.LevelPrizes[level])
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private ApplicationUser? _currentUser;
+    private Dictionary<int, int> _levelCounts = new();
+    private List<int> _missingLevels = new();
+    private string _playerName = "";
+    private bool _isPlaying = false;
+    private bool _gameFinished = false;
+    
+    private GameSession? _gameSession;
+    private Question? _currentQuestion;
+    private List<Guid> _usedQuestionIds = new();
+    
+    private CorrectOption? _selectedAnswer;
+    private bool _showAnswer = false;
+    private bool _isCorrect = false;
+    
+    // Timer
+    private int _timeRemaining = 30;
+    private System.Threading.Timer? _timer;
+    private int _timeTaken = 0;
+    
+    // Lifelines
+    private List<CorrectOption> _hiddenOptions = new();
+    private string _lifelineResult = "";
+    private AudiencePollResult? _audiencePoll;
+    private LifelineUsage _currentLifelineUsage = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        if (_currentUser != null)
+        {
+            _levelCounts = await QuestionService.GetQuestionCountByLevelAsync(_currentUser.Id);
+            _missingLevels = Enumerable.Range(1, 15).Where(l => _levelCounts.GetValueOrDefault(l, 0) == 0).ToList();
+        }
+    }
+
+    private async Task StartGame()
+    {
+        if (string.IsNullOrWhiteSpace(_playerName) || _missingLevels.Any()) return;
+        
+        _gameSession = await GameService.StartNewGameAsync(_playerName, _currentUser!.Id);
+        _usedQuestionIds.Clear();
+        _isPlaying = true;
+        _gameFinished = false;
+        
+        await LoadQuestion();
+    }
+
+    private async Task LoadQuestion()
+    {
+        if (_gameSession == null) return;
+        
+        _currentQuestion = await GameService.GetQuestionForLevelAsync(_gameSession.CurrentLevel, _currentUser!.Id, _usedQuestionIds);
+        
+        if (_currentQuestion == null)
+        {
+            Snackbar.Add($"No question available for level {_gameSession.CurrentLevel}", Severity.Error);
+            return;
+        }
+        
+        _usedQuestionIds.Add(_currentQuestion.Id);
+        _selectedAnswer = null;
+        _showAnswer = false;
+        _isCorrect = false;
+        _hiddenOptions.Clear();
+        _lifelineResult = "";
+        _audiencePoll = null;
+        _currentLifelineUsage = new();
+        
+        // Start timer
+        _timeRemaining = _currentQuestion.GetTimeLimitForLevel();
+        _timeTaken = 0;
+        StartTimer();
+    }
+
+    private void StartTimer()
+    {
+        _timer?.Dispose();
+        _timer = new System.Threading.Timer(async _ =>
+        {
+            _timeRemaining--;
+            _timeTaken++;
+            
+            if (_timeRemaining <= 0)
+            {
+                _timer?.Dispose();
+                await InvokeAsync(async () =>
+                {
+                    await TimeOut();
+                    StateHasChanged();
+                });
+            }
+            else
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }, null, 1000, 1000);
+    }
+
+    private async Task TimeOut()
+    {
+        _timer?.Dispose();
+        _showAnswer = true;
+        _isCorrect = false;
+        
+        _gameSession = await GameService.RecordAnswerAsync(_gameSession!.Id, _currentQuestion!.Id, null, _timeTaken, true, _currentLifelineUsage);
+        _gameFinished = true;
+    }
+
+    private void SelectAnswer(CorrectOption answer)
+    {
+        if (!_showAnswer && !_hiddenOptions.Contains(answer))
+            _selectedAnswer = answer;
+    }
+
+    private async Task LockAnswer()
+    {
+        if (!_selectedAnswer.HasValue || _currentQuestion == null || _gameSession == null) return;
+        
+        _timer?.Dispose();
+        _showAnswer = true;
+        _isCorrect = _selectedAnswer == _currentQuestion.CorrectAnswer;
+        
+        _gameSession = await GameService.RecordAnswerAsync(_gameSession.Id, _currentQuestion.Id, _selectedAnswer, _timeTaken, false, _currentLifelineUsage);
+        
+        if (!_isCorrect || _gameSession.CurrentLevel > 15)
+        {
+            _gameFinished = _gameSession.Status != GameStatus.InProgress;
+        }
+    }
+
+    private async Task NextQuestion()
+    {
+        if (_gameSession?.Status == GameStatus.Won)
+        {
+            _gameFinished = true;
+        }
+        else
+        {
+            await LoadQuestion();
+        }
+    }
+
+    private async Task QuitGame()
+    {
+        _timer?.Dispose();
+        _gameSession = await GameService.QuitGameAsync(_gameSession!.Id);
+        _gameFinished = true;
+    }
+
+    private void EndGame()
+    {
+        _gameFinished = true;
+    }
+
+    private void ResetGame()
+    {
+        _isPlaying = false;
+        _gameFinished = false;
+        _gameSession = null;
+        _currentQuestion = null;
+        _usedQuestionIds.Clear();
+    }
+
+    // Lifelines
+    private async Task UseFiftyFifty()
+    {
+        if (_gameSession == null || _currentQuestion == null || _gameSession.FiftyFiftyUsed) return;
+        
+        var (removed, _) = await GameService.GetFiftyFiftyOptionsAsync(_currentQuestion);
+        _hiddenOptions = removed;
+        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.FiftyFifty);
+        _currentLifelineUsage.FiftyFifty = true;
+    }
+
+    private async Task UsePhoneAFriend()
+    {
+        if (_gameSession == null || _currentQuestion == null || _gameSession.PhoneAFriendUsed) return;
+        
+        _lifelineResult = await GameService.GetPhoneAFriendHintAsync(_currentQuestion);
+        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.PhoneAFriend);
+        _currentLifelineUsage.PhoneAFriend = true;
+    }
+
+    private async Task UseAudiencePoll()
+    {
+        if (_gameSession == null || _currentQuestion == null || _gameSession.AudiencePollUsed) return;
+        
+        _audiencePoll = await GameService.GetAudiencePollAsync(_currentQuestion);
+        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.AudiencePoll);
+        _currentLifelineUsage.AudiencePoll = true;
+    }
+
+    private async Task UseExpertAdvice()
+    {
+        if (_gameSession == null || _currentQuestion == null || _gameSession.ExpertAdviceUsed) return;
+        
+        var (answer, confidence) = await GameService.GetExpertAdviceAsync(_currentQuestion);
+        _lifelineResult = $"🎓 Expert says: \"I'm {confidence}% confident the answer is Option {answer}\"";
+        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.ExpertAdvice);
+        _currentLifelineUsage.ExpertAdvice = true;
+    }
+
+    private List<(string Label, string Text, CorrectOption Answer)> GetCurrentOptions() => _currentQuestion == null
+        ? new()
+        : new()
+        {
+            ("A", _currentQuestion.OptionA, CorrectOption.A),
+            ("B", _currentQuestion.OptionB, CorrectOption.B),
+            ("C", _currentQuestion.OptionC, CorrectOption.C),
+            ("D", _currentQuestion.OptionD, CorrectOption.D)
+        };
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

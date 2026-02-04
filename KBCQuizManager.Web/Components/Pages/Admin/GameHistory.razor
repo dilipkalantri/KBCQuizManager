@@ -1,0 +1,200 @@
+@page "/admin/game-history"
+@inject IAuthService AuthService
+@inject IGameService GameService
+
+<PageTitle>Game History - KBC Quiz Manager</PageTitle>
+
+<!-- Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <div>
+        <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Game History</h1>
+        <p style="color: #9ca3af; margin: 0;">View past game sessions and statistics</p>
+    </div>
+    <a href="/admin/play" style="background: #7c3aed; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+        🎮 Play New Game
+    </a>
+</div>
+
+<!-- Statistics -->
+@if (_stats != null)
+{
+    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 30px;">
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0 0 5px 0;">Total Games</p>
+            <h3 style="color: white; font-size: 28px; margin: 0;">@_stats.TotalGames</h3>
+        </div>
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0 0 5px 0;">Games Won</p>
+            <h3 style="color: #10b981; font-size: 28px; margin: 0;">@_stats.GamesWon</h3>
+        </div>
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0 0 5px 0;">Highest Prize</p>
+            <h3 style="color: #fbbf24; font-size: 24px; margin: 0;">@KBCPrizeStructure.FormatPrize(_stats.HighestPrize)</h3>
+        </div>
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0 0 5px 0;">Total Won</p>
+            <h3 style="color: #7c3aed; font-size: 24px; margin: 0;">@KBCPrizeStructure.FormatPrize(_stats.TotalPrizeWon)</h3>
+        </div>
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0 0 5px 0;">Accuracy</p>
+            <h3 style="color: white; font-size: 28px; margin: 0;">@_stats.AccuracyPercent.ToString("F1")%</h3>
+        </div>
+    </div>
+}
+
+<!-- Game Sessions List -->
+@if (_isLoading)
+{
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
+}
+else if (_sessions.Any())
+{
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+        @foreach (var session in _sessions)
+        {
+            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; cursor: pointer;" @onclick="() => ToggleSessionDetails(session.Id)">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; background: @GetStatusBg(session.Status);">
+                            @GetStatusIcon(session.Status)
+                        </div>
+                        <div>
+                            <h3 style="color: white; font-size: 18px; margin: 0 0 5px 0;">@session.PlayerName</h3>
+                            <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+                                @session.StartedAt.ToLocalTime().ToString("MMM dd, yyyy HH:mm") • Duration: @session.GetDuration()
+                            </p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 30px;">
+                        <div style="text-align: center;">
+                            <p style="color: #9ca3af; font-size: 11px; margin: 0;">Level</p>
+                            <p style="color: white; font-size: 18px; font-weight: 600; margin: 0;">@session.CurrentLevel/15</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="color: #9ca3af; font-size: 11px; margin: 0;">Correct</p>
+                            <p style="color: #10b981; font-size: 18px; font-weight: 600; margin: 0;">@session.CorrectAnswers/@session.QuestionsAnswered</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="color: #9ca3af; font-size: 11px; margin: 0;">Lifelines Used</p>
+                            <p style="color: white; font-size: 18px; font-weight: 600; margin: 0;">@(4 - session.GetRemainingLifelines())/4</p>
+                        </div>
+                        <div style="text-align: right; min-width: 120px;">
+                            <p style="color: #9ca3af; font-size: 11px; margin: 0;">Prize Won</p>
+                            <p style="color: #fbbf24; font-size: 20px; font-weight: 700; margin: 0;">@KBCPrizeStructure.FormatPrize(session.FinalPrize)</p>
+                        </div>
+                        <span style="padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; background: @GetStatusBg(session.Status); color: white;">
+                            @GetStatusText(session.Status)
+                        </span>
+                    </div>
+                </div>
+                
+                @if (_expandedSessionId == session.Id && session.Answers.Any())
+                {
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #2a3f5f;">
+                        <h4 style="color: white; margin: 0 0 15px 0;">Question Details</h4>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            @foreach (var answer in session.Answers.OrderBy(a => a.Level))
+                            {
+                                <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: #1a1a2e; border-radius: 8px;">
+                                    <span style="width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; background: @GetLevelColor(answer.Level); color: white;">
+                                        @answer.Level
+                                    </span>
+                                    <div style="flex: 1;">
+                                        <p style="color: white; font-size: 14px; margin: 0;">@(answer.Question?.QuestionText ?? "Question not available")</p>
+                                        <p style="color: #6b7280; font-size: 12px; margin: 5px 0 0 0;">
+                                            Answer: @(answer.PlayerAnswer?.ToString() ?? "No answer") 
+                                            @if (answer.TimedOut) { <span style="color: #ef4444;">(Timed out)</span> }
+                                            • Time: @answer.TimeTaken s
+                                            @if (answer.UsedFiftyFifty || answer.UsedPhoneAFriend || answer.UsedAudiencePoll || answer.UsedExpertAdvice)
+                                            {
+                                                <span> • Lifelines: </span>
+                                                @if (answer.UsedFiftyFifty) { <span>50:50 </span> }
+                                                @if (answer.UsedPhoneAFriend) { <span>📞 </span> }
+                                                @if (answer.UsedAudiencePoll) { <span>👥 </span> }
+                                                @if (answer.UsedExpertAdvice) { <span>🎓 </span> }
+                                            }
+                                        </p>
+                                    </div>
+                                    <span style="font-size: 20px;">@(answer.IsCorrect ? "✅" : "❌")</span>
+                                    <span style="color: #fbbf24; font-size: 14px; min-width: 80px; text-align: right;">
+                                        @KBCPrizeStructure.FormatPrize(answer.PrizeWon)
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 15px;">📊</div>
+        <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No games played yet</h3>
+        <p style="color: #6b7280; margin: 0 0 20px 0;">Start playing to see your game history</p>
+        <a href="/admin/play" style="background: #7c3aed; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+            🎮 Play Now
+        </a>
+    </div>
+}
+
+@code {
+    private ApplicationUser? _currentUser;
+    private List<GameSession> _sessions = new();
+    private GameStatistics? _stats;
+    private bool _isLoading = true;
+    private Guid? _expandedSessionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        if (_currentUser != null)
+        {
+            _sessions = await GameService.GetGameHistoryAsync(_currentUser.Id, 50);
+            _stats = await GameService.GetGameStatisticsAsync(_currentUser.Id);
+        }
+        _isLoading = false;
+    }
+
+    private void ToggleSessionDetails(Guid sessionId)
+    {
+        _expandedSessionId = _expandedSessionId == sessionId ? null : sessionId;
+    }
+
+    private string GetStatusIcon(GameStatus status) => status switch
+    {
+        GameStatus.Won => "🏆",
+        GameStatus.Lost => "❌",
+        GameStatus.Quit => "🚪",
+        GameStatus.TimedOut => "⏰",
+        _ => "🎮"
+    };
+
+    private string GetStatusText(GameStatus status) => status switch
+    {
+        GameStatus.Won => "Won",
+        GameStatus.Lost => "Lost",
+        GameStatus.Quit => "Quit",
+        GameStatus.TimedOut => "Timed Out",
+        _ => "In Progress"
+    };
+
+    private string GetStatusBg(GameStatus status) => status switch
+    {
+        GameStatus.Won => "#10b981",
+        GameStatus.Lost => "#ef4444",
+        GameStatus.Quit => "#f59e0b",
+        GameStatus.TimedOut => "#6366f1",
+        _ => "#7c3aed"
+    };
+
+    private string GetLevelColor(int level) => level switch
+    {
+        <= 5 => "#10b981",
+        <= 10 => "#f59e0b",
+        <= 13 => "#ef4444",
+        _ => "#8b5cf6"
+    };
+}

@@ -31,13 +31,11 @@ public class Question
     [Required]
     public CorrectOption CorrectAnswer { get; set; }
     
-    // KBC Style: Difficulty levels with prize amounts
-    public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Easy;
+    // KBC Level (1-15) - determines prize amount
+    [Range(1, 15)]
+    public int Level { get; set; } = 1;
     
-    // Prize amount for this question (KBC style)
-    public long PrizeAmount { get; set; } = 1000;
-    
-    // Optional hint/explanation
+    // Optional hint/explanation (used for Phone a Friend lifeline)
     [MaxLength(1000)]
     public string? Explanation { get; set; }
     
@@ -64,6 +62,36 @@ public class Question
         CorrectOption.D => OptionD,
         _ => string.Empty
     };
+    
+    // Get prize amount based on level (KBC India prize structure)
+    public long GetPrizeAmount() => Level switch
+    {
+        1 => 1000,
+        2 => 2000,
+        3 => 3000,
+        4 => 5000,
+        5 => 10000,        // First milestone
+        6 => 20000,
+        7 => 40000,
+        8 => 80000,
+        9 => 160000,
+        10 => 320000,      // Second milestone
+        11 => 640000,
+        12 => 1250000,
+        13 => 2500000,
+        14 => 5000000,
+        15 => 70000000,    // 7 Crore
+        _ => 1000
+    };
+    
+    // Get time limit based on level
+    public int GetTimeLimitForLevel() => Level switch
+    {
+        <= 5 => 30,    // Easy questions: 30 seconds
+        <= 10 => 45,   // Medium questions: 45 seconds
+        <= 13 => 60,   // Hard questions: 60 seconds
+        _ => 90        // Expert questions: 90 seconds
+    };
 }
 
 public enum CorrectOption
@@ -74,10 +102,41 @@ public enum CorrectOption
     D = 4
 }
 
-public enum DifficultyLevel
+// KBC Prize Milestones
+public static class KBCPrizeStructure
 {
-    Easy = 1,      // Questions 1-5 (₹1,000 - ₹10,000)
-    Medium = 2,    // Questions 6-10 (₹20,000 - ₹3,20,000)
-    Hard = 3,      // Questions 11-13 (₹6,40,000 - ₹25,00,000)
-    Expert = 4     // Questions 14-15 (₹50,00,000 - ₹7 Crore)
+    public static readonly Dictionary<int, long> LevelPrizes = new()
+    {
+        { 1, 1000 },
+        { 2, 2000 },
+        { 3, 3000 },
+        { 4, 5000 },
+        { 5, 10000 },      // First guaranteed amount
+        { 6, 20000 },
+        { 7, 40000 },
+        { 8, 80000 },
+        { 9, 160000 },
+        { 10, 320000 },    // Second guaranteed amount
+        { 11, 640000 },
+        { 12, 1250000 },
+        { 13, 2500000 },
+        { 14, 5000000 },
+        { 15, 70000000 }   // 7 Crore
+    };
+    
+    public static readonly int[] MilestoneLevels = { 5, 10 };
+    
+    public static long GetGuaranteedAmount(int currentLevel)
+    {
+        if (currentLevel >= 10) return LevelPrizes[10];
+        if (currentLevel >= 5) return LevelPrizes[5];
+        return 0;
+    }
+    
+    public static string FormatPrize(long amount)
+    {
+        if (amount >= 10000000) return $"₹{amount / 10000000} Crore";
+        if (amount >= 100000) return $"₹{amount / 100000} Lakh";
+        return $"₹{amount:N0}";
+    }
 }

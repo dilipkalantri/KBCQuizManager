@@ -14,6 +14,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Question> Questions => Set<Question>();
+    public DbSet<GameSession> GameSessions => Set<GameSession>();
+    public DbSet<GameSessionAnswer> GameSessionAnswers => Set<GameSessionAnswer>();
     
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -91,7 +93,40 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.OwnerId);
             entity.HasIndex(e => e.CategoryId);
-            entity.HasIndex(e => e.Difficulty);
+            entity.HasIndex(e => e.Level);
+        });
+        
+        // GameSession configuration
+        builder.Entity<GameSession>(entity =>
+        {
+            entity.ToTable("GameSessions");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.OwnerId);
+            entity.HasIndex(e => e.StartedAt);
+            entity.HasIndex(e => e.Status);
+            
+            entity.HasOne(g => g.Owner)
+                .WithMany()
+                .HasForeignKey(g => g.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasMany(g => g.Answers)
+                .WithOne(a => a.GameSession)
+                .HasForeignKey(a => a.GameSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        // GameSessionAnswer configuration
+        builder.Entity<GameSessionAnswer>(entity =>
+        {
+            entity.ToTable("GameSessionAnswers");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.GameSessionId);
+            
+            entity.HasOne(a => a.Question)
+                .WithMany()
+                .HasForeignKey(a => a.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -12,14 +12,14 @@
     <a href="/admin/questions" style="color: #7c3aed; font-size: 24px; text-decoration: none;">←</a>
     <div>
         <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Import Questions</h1>
-        <p style="color: #9ca3af; margin: 0;">Bulk import questions from a CSV file</p>
+        <p style="color: #9ca3af; margin: 0;">Import questions from JSON file with level information</p>
     </div>
 </div>
 
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
     <!-- Upload Section -->
     <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px;">
-        <h2 style="color: white; font-size: 18px; margin: 0 0 20px 0;">📤 Upload CSV File</h2>
+        <h2 style="color: white; font-size: 18px; margin: 0 0 20px 0;">📤 Upload JSON File</h2>
         
         <div style="margin-bottom: 20px;">
             <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Select Category</label>
@@ -32,11 +32,11 @@
         </div>
         
         <div style="border: 2px dashed #2a3f5f; border-radius: 12px; padding: 40px; text-align: center; background: #1a1a2e; margin-bottom: 20px;">
-            <InputFile OnChange="HandleFileSelected" accept=".csv" style="display: none;" id="fileUpload" />
+            <InputFile OnChange="HandleFileSelected" accept=".json" style="display: none;" id="fileUpload" />
             <label for="fileUpload" style="cursor: pointer; display: block;">
                 <div style="font-size: 48px; margin-bottom: 15px;">📁</div>
                 <h3 style="color: white; font-size: 16px; margin: 0 0 8px 0;">
-                    @(_selectedFile != null ? _selectedFile.Name : "Drop your CSV file here")
+                    @(_selectedFile != null ? _selectedFile.Name : "Drop your JSON file here")
                 </h3>
                 <p style="color: #6b7280; font-size: 14px; margin: 0;">
                     @(_selectedFile != null ? $"Size: {FormatFileSize(_selectedFile.Size)}" : "or click to browse")
@@ -47,12 +47,27 @@
         @if (_previewQuestions.Any())
         {
             <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">Preview (@_previewQuestions.Count questions found)</h3>
+            
+            <!-- Level Distribution -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
+                @foreach (var grp in _previewQuestions.GroupBy(q => q.Level).OrderBy(g => g.Key))
+                {
+                    <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; background: @GetLevelColor(grp.Key); color: white;">
+                        L@grp.Key: @grp.Count()
+                    </span>
+                }
+            </div>
+            
             <div style="max-height: 300px; overflow-y: auto; background: #1a1a2e; border-radius: 8px; margin-bottom: 20px;">
                 @foreach (var (q, idx) in _previewQuestions.Take(10).Select((x, i) => (x, i)))
                 {
                     <div style="padding: 12px 15px; border-bottom: 1px solid #2a3f5f;">
-                        <p style="color: white; font-size: 14px; margin: 0 0 5px 0;">@(idx + 1). @TruncateText(q.QuestionText, 80)</p>
-                        <p style="color: #6b7280; font-size: 12px; margin: 0;">Answer: @q.CorrectAnswer | Difficulty: @q.Difficulty</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; background: @GetLevelColor(q.Level); color: white;">Level @q.Level</span>
+                            <span style="color: #fbbf24; font-size: 11px;">@KBCPrizeStructure.FormatPrize(KBCPrizeStructure.LevelPrizes.GetValueOrDefault(q.Level, 1000))</span>
+                        </div>
+                        <p style="color: white; font-size: 14px; margin: 0;">@TruncateText(q.QuestionText, 80)</p>
+                        <p style="color: #6b7280; font-size: 12px; margin: 5px 0 0 0;">Answer: @q.CorrectAnswer</p>
                     </div>
                 }
                 @if (_previewQuestions.Count > 10)
@@ -68,27 +83,63 @@
                 </button>
             </div>
         }
+        
+        <!-- Manual JSON Input -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #2a3f5f;">
+            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">Or paste JSON directly</h3>
+            <textarea @bind="_jsonText" rows="8" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 13px; font-family: monospace; resize: vertical;" placeholder='{"questions": [{"question": "...", "optionA": "...", ...}]}'></textarea>
+            <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+                <button @onclick="ParseJsonText" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                    Parse JSON
+                </button>
+            </div>
+        </div>
     </div>
     
     <!-- Help Section -->
     <div>
         <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">ℹ️ CSV Format</h3>
-            <p style="color: #9ca3af; font-size: 14px; margin: 0 0 15px 0;">Your CSV should have these columns:</p>
-            <div style="background: #1a1a2e; padding: 10px; border-radius: 6px; font-size: 12px; color: #7c3aed; word-break: break-all;">
-                Question,OptionA,OptionB,OptionC,OptionD,Answer,Difficulty
+            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">📋 JSON Format</h3>
+            <p style="color: #9ca3af; font-size: 13px; margin: 0 0 15px 0;">Your JSON should follow this structure:</p>
+            <div style="background: #1a1a2e; padding: 15px; border-radius: 8px; font-size: 11px; color: #9ca3af; font-family: monospace; white-space: pre-wrap; overflow-x: auto;">
+{
+  "questions": [
+    {
+      "question": "What is the capital of India?",
+      "optionA": "Mumbai",
+      "optionB": "Delhi",
+      "optionC": "Kolkata",
+      "optionD": "Chennai",
+      "answer": "B",
+      "level": 1,
+      "explanation": "Delhi is the capital city"
+    }
+  ]
+}</div>
+        </div>
+        
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">🏆 Level Guide</h3>
+            <div style="font-size: 12px;">
+                @foreach (var (level, prize) in KBCPrizeStructure.LevelPrizes)
+                {
+                    <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #2a3f5f;">
+                        <span style="color: @GetLevelColor(level);">Level @level</span>
+                        <span style="color: #fbbf24;">@KBCPrizeStructure.FormatPrize(prize)</span>
+                    </div>
+                }
             </div>
-            <p style="color: #6b7280; font-size: 12px; margin: 15px 0 0 0;">
-                • Answer: A, B, C, or D<br/>
-                • Difficulty: Easy, Medium, Hard, Expert
-            </p>
         </div>
         
         <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px;">
-            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">Example Row</h3>
-            <div style="background: #1a1a2e; padding: 10px; border-radius: 6px; font-size: 11px; color: #9ca3af; word-break: break-all;">
-                What is the capital of India?,Mumbai,Delhi,Kolkata,Chennai,B,Easy
-            </div>
+            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">💡 Tips</h3>
+            <ul style="color: #9ca3af; font-size: 13px; margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Level 1-5: Easy questions (30s timer)</li>
+                <li style="margin-bottom: 8px;">Level 6-10: Medium questions (45s timer)</li>
+                <li style="margin-bottom: 8px;">Level 11-13: Hard questions (60s timer)</li>
+                <li style="margin-bottom: 8px;">Level 14-15: Expert questions (90s timer)</li>
+                <li>Add explanations for better Phone a Friend hints</li>
+            </ul>
         </div>
     </div>
 </div>
@@ -100,6 +151,7 @@
     private IBrowserFile? _selectedFile;
     private List<Question> _previewQuestions = new();
     private bool _isImporting = false;
+    private string _jsonText = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -117,73 +169,122 @@
     {
         _selectedFile = e.File;
         _previewQuestions.Clear();
+        
         try
         {
             using var stream = _selectedFile.OpenReadStream(10 * 1024 * 1024);
             using var reader = new StreamReader(stream);
-            var lineNum = 0;
-            while (!reader.EndOfStream)
-            {
-                var line = await reader.ReadLineAsync();
-                lineNum++;
-                if (lineNum == 1 && line?.ToLower().Contains("question") == true) continue;
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                var parts = ParseCsvLine(line);
-                if (parts.Length >= 7)
-                {
-                    _previewQuestions.Add(new Question
-                    {
-                        QuestionText = parts[0].Trim(),
-                        OptionA = parts[1].Trim(),
-                        OptionB = parts[2].Trim(),
-                        OptionC = parts[3].Trim(),
-                        OptionD = parts[4].Trim(),
-                        CorrectAnswer = ParseAnswer(parts[5].Trim()),
-                        Difficulty = ParseDifficulty(parts[6].Trim())
-                    });
-                }
-            }
-            Snackbar.Add($"Found {_previewQuestions.Count} questions", Severity.Success);
+            var json = await reader.ReadToEndAsync();
+            ParseJson(json);
         }
-        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
-        StateHasChanged();
-    }
-
-    private string[] ParseCsvLine(string line)
-    {
-        var result = new List<string>();
-        var current = "";
-        var inQuotes = false;
-        foreach (var c in line)
+        catch (Exception ex)
         {
-            if (c == '"') inQuotes = !inQuotes;
-            else if (c == ',' && !inQuotes) { result.Add(current); current = ""; }
-            else current += c;
+            Snackbar.Add($"Error reading file: {ex.Message}", Severity.Error);
         }
-        result.Add(current);
-        return result.ToArray();
     }
 
-    private CorrectOption ParseAnswer(string a) => a.ToUpper() switch { "A" => CorrectOption.A, "B" => CorrectOption.B, "C" => CorrectOption.C, "D" => CorrectOption.D, _ => CorrectOption.A };
-    private DifficultyLevel ParseDifficulty(string d) => d.ToLower() switch { "easy" => DifficultyLevel.Easy, "medium" => DifficultyLevel.Medium, "hard" => DifficultyLevel.Hard, "expert" => DifficultyLevel.Expert, _ => DifficultyLevel.Easy };
+    private void ParseJsonText()
+    {
+        if (string.IsNullOrWhiteSpace(_jsonText))
+        {
+            Snackbar.Add("Please enter JSON text", Severity.Warning);
+            return;
+        }
+        ParseJson(_jsonText);
+    }
+
+    private void ParseJson(string json)
+    {
+        _previewQuestions.Clear();
+        
+        try
+        {
+            var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var data = System.Text.Json.JsonSerializer.Deserialize<QuestionImportData>(json, options);
+            
+            if (data?.Questions == null || !data.Questions.Any())
+            {
+                Snackbar.Add("No questions found in JSON", Severity.Warning);
+                return;
+            }
+
+            foreach (var q in data.Questions)
+            {
+                _previewQuestions.Add(new Question
+                {
+                    QuestionText = q.Question ?? q.QuestionText ?? "",
+                    OptionA = q.OptionA ?? q.Options?.A ?? "",
+                    OptionB = q.OptionB ?? q.Options?.B ?? "",
+                    OptionC = q.OptionC ?? q.Options?.C ?? "",
+                    OptionD = q.OptionD ?? q.Options?.D ?? "",
+                    CorrectAnswer = ParseAnswer(q.Answer ?? q.CorrectAnswer ?? "A"),
+                    Level = Math.Clamp(q.Level, 1, 15),
+                    Explanation = q.Explanation ?? q.Hint
+                });
+            }
+
+            Snackbar.Add($"Found {_previewQuestions.Count} questions", Severity.Success);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Invalid JSON: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private CorrectOption ParseAnswer(string a) => a.ToUpper().Trim() switch
+    {
+        "A" or "1" => CorrectOption.A,
+        "B" or "2" => CorrectOption.B,
+        "C" or "3" => CorrectOption.C,
+        "D" or "4" => CorrectOption.D,
+        _ => CorrectOption.A
+    };
 
     private async Task ImportQuestions()
     {
         if (_selectedCategoryId == Guid.Empty || !_previewQuestions.Any()) return;
+        
         _isImporting = true;
-        var count = 0;
-        foreach (var q in _previewQuestions)
+        
+        var json = System.Text.Json.JsonSerializer.Serialize(new QuestionImportData { Questions = _previewQuestions.Select(q => new QuestionImportItem
         {
-            q.CategoryId = _selectedCategoryId;
-            q.OwnerId = _currentUser!.Id;
-            var (ok, _) = await QuestionService.CreateQuestionAsync(q);
-            if (ok) count++;
-        }
-        Snackbar.Add($"Imported {count} questions", Severity.Success);
+            Question = q.QuestionText,
+            OptionA = q.OptionA,
+            OptionB = q.OptionB,
+            OptionC = q.OptionC,
+            OptionD = q.OptionD,
+            Answer = q.CorrectAnswer.ToString(),
+            Level = q.Level,
+            Explanation = q.Explanation
+        }).ToList() });
+        
+        var (success, failed, message) = await QuestionService.ImportQuestionsFromJsonAsync(json, _selectedCategoryId, _currentUser!.Id);
+        
+        Snackbar.Add(message, success > 0 ? Severity.Success : Severity.Error);
         _isImporting = false;
-        NavigationManager.NavigateTo("/admin/questions");
+        
+        if (success > 0)
+        {
+            NavigationManager.NavigateTo("/admin/questions");
+        }
     }
 
-    private void ClearSelection() { _selectedFile = null; _previewQuestions.Clear(); StateHasChanged(); }
+    private void ClearSelection()
+    {
+        _selectedFile = null;
+        _previewQuestions.Clear();
+        _jsonText = "";
+        StateHasChanged();
+    }
+
     private string FormatFileSize(long b) => b >= 1048576 ? $"{b / 1048576.0:F1} MB" : b >= 1024 ? $"{b / 1024.0:F1} KB" : $"{b} bytes";
+
+    private string GetLevelColor(int level) => level switch
+    {
+        <= 5 => "#10b981",
+        <= 10 => "#f59e0b",
+        <= 13 => "#ef4444",
+        _ => "#8b5cf6"
+    };
 }

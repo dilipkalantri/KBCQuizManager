@@ -32,9 +32,9 @@ public class DatabaseInitializer : IDatabaseInitializer
     {
         try
         {
-            // Apply pending migrations
-            await _context.Database.MigrateAsync();
-            _logger.LogInformation("Database migrations applied successfully");
+            // Create database and tables if they don't exist
+            await _context.Database.EnsureCreatedAsync();
+            _logger.LogInformation("Database created/verified successfully");
             
             // Check if SuperAdmin exists
             var superAdminExists = await _context.Users

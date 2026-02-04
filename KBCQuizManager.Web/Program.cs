@@ -74,6 +74,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
+builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 
 var app = builder.Build();

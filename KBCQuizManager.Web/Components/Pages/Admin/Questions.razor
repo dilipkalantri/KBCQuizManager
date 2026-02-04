@@ -11,16 +11,36 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
     <div>
         <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Questions</h1>
-        <p style="color: #9ca3af; margin: 0;">Manage your question bank</p>
+        <p style="color: #9ca3af; margin: 0;">Manage your question bank by level (1-15)</p>
     </div>
-    <button @onclick="OpenAddDialog" style="background: #7c3aed; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+    <button @onclick="OpenAddDialog" style="background: #7c3aed; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
         ➕ Add Question
     </button>
 </div>
 
+<!-- Level Summary -->
+<div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        @for (int i = 1; i <= 15; i++)
+        {
+            var level = i;
+            var count = _levelCounts.GetValueOrDefault(level, 0);
+            var isSelected = _selectedLevel == level;
+            <button @onclick="() => FilterByLevel(level)" 
+                    style="padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid @(isSelected ? "#7c3aed" : "#2a3f5f"); background: @(isSelected ? "#7c3aed" : "transparent"); color: @(count > 0 ? "white" : "#6b7280");">
+                L@level <span style="color: @(count > 0 ? "#10b981" : "#ef4444");">(@count)</span>
+            </button>
+        }
+        <button @onclick="() => FilterByLevel(null)" 
+                style="padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid @(_selectedLevel == null ? "#7c3aed" : "#2a3f5f"); background: @(_selectedLevel == null ? "#7c3aed" : "transparent"); color: white;">
+            All (@_questions.Count)
+        </button>
+    </div>
+</div>
+
 <!-- Filters -->
 <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
         <input @bind="_searchString" @bind:event="oninput" placeholder="Search questions..." style="padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
         <select @bind="_selectedCategoryId" style="padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
             <option value="">All Categories</option>
@@ -28,13 +48,6 @@
             {
                 <option value="@cat.Id">@cat.Name</option>
             }
-        </select>
-        <select @bind="_selectedDifficulty" style="padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
-            <option value="">All Difficulties</option>
-            <option value="Easy">Easy</option>
-            <option value="Medium">Medium</option>
-            <option value="Hard">Hard</option>
-            <option value="Expert">Expert</option>
         </select>
     </div>
 </div>
@@ -85,13 +98,13 @@ else if (FilteredQuestions.Any())
                 <!-- Footer -->
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #2a3f5f;">
                     <div style="display: flex; gap: 8px;">
-                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: @GetDifficultyBg(q.Difficulty); color: white;">@q.Difficulty</span>
+                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: @GetLevelColor(q.Level); color: white;">Level @q.Level</span>
                         @if (q.Category != null)
                         {
                             <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: #2a3f5f; color: #7c3aed;">@q.Category.Name</span>
                         }
                     </div>
-                    <span style="color: #6b7280; font-size: 13px;">₹@q.PrizeAmount.ToString("N0")</span>
+                    <span style="color: #fbbf24; font-size: 14px; font-weight: 600;">@KBCPrizeStructure.FormatPrize(q.GetPrizeAmount())</span>
                 </div>
             </div>
         }
@@ -102,7 +115,7 @@ else
     <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
         <div style="font-size: 64px; margin-bottom: 15px;">❓</div>
         <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No questions found</h3>
-        <p style="color: #6b7280; margin: 0 0 20px 0;">Add your first question to get started</p>
+        <p style="color: #6b7280; margin: 0 0 20px 0;">Add questions for each level (1-15)</p>
         <button @onclick="OpenAddDialog" style="background: #7c3aed; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
             Add Question
         </button>
@@ -151,12 +164,12 @@ else
                     </select>
                 </div>
                 <div>
-                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Difficulty</label>
-                    <select @bind="_editingQuestion.Difficulty" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
-                        <option value="@DifficultyLevel.Easy">Easy</option>
-                        <option value="@DifficultyLevel.Medium">Medium</option>
-                        <option value="@DifficultyLevel.Hard">Hard</option>
-                        <option value="@DifficultyLevel.Expert">Expert</option>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Level (1-15) - Prize: @KBCPrizeStructure.FormatPrize(KBCPrizeStructure.LevelPrizes.GetValueOrDefault(_editingQuestion.Level, 1000))</label>
+                    <select @bind="_editingQuestion.Level" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
+                        @for (int i = 1; i <= 15; i++)
+                        {
+                            <option value="@i">Level @i - @KBCPrizeStructure.FormatPrize(KBCPrizeStructure.LevelPrizes[i])</option>
+                        }
                     </select>
                 </div>
                 <div>
@@ -168,6 +181,11 @@ else
                         }
                     </select>
                 </div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Hint/Explanation (for Phone a Friend lifeline)</label>
+                <textarea @bind="_editingQuestion.Explanation" rows="2" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px; resize: none;" placeholder="Optional hint"></textarea>
             </div>
             
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
@@ -184,18 +202,19 @@ else
     private ApplicationUser? _currentUser;
     private List<Question> _questions = new();
     private List<Category> _categories = new();
+    private Dictionary<int, int> _levelCounts = new();
     private bool _isLoading = true;
     private bool _showDialog = false;
     private bool _isEditMode = false;
     private Question _editingQuestion = new();
     private string _searchString = "";
     private string _selectedCategoryId = "";
-    private string _selectedDifficulty = "";
+    private int? _selectedLevel;
 
     private IEnumerable<Question> FilteredQuestions => _questions.Where(q =>
         (string.IsNullOrEmpty(_searchString) || q.QuestionText.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) &&
         (string.IsNullOrEmpty(_selectedCategoryId) || q.CategoryId.ToString() == _selectedCategoryId) &&
-        (string.IsNullOrEmpty(_selectedDifficulty) || q.Difficulty.ToString() == _selectedDifficulty));
+        (!_selectedLevel.HasValue || q.Level == _selectedLevel.Value));
 
     protected override async Task OnInitializedAsync()
     {
@@ -210,8 +229,14 @@ else
         {
             _questions = await QuestionService.GetQuestionsAsync(_currentUser.Id);
             _categories = await CategoryService.GetCategoriesAsync(_currentUser.Id);
+            _levelCounts = await QuestionService.GetQuestionCountByLevelAsync(_currentUser.Id);
         }
         _isLoading = false;
+    }
+
+    private void FilterByLevel(int? level)
+    {
+        _selectedLevel = level;
     }
 
     private void OpenAddDialog()
@@ -222,7 +247,7 @@ else
             return;
         }
         _isEditMode = false;
-        _editingQuestion = new Question { CategoryId = _categories.First().Id, Difficulty = DifficultyLevel.Easy };
+        _editingQuestion = new Question { CategoryId = _categories.First().Id, Level = 1 };
         _showDialog = true;
     }
 
@@ -233,7 +258,7 @@ else
         {
             Id = q.Id, QuestionText = q.QuestionText, OptionA = q.OptionA, OptionB = q.OptionB,
             OptionC = q.OptionC, OptionD = q.OptionD, CorrectAnswer = q.CorrectAnswer,
-            Difficulty = q.Difficulty, CategoryId = q.CategoryId, Explanation = q.Explanation, OwnerId = q.OwnerId
+            Level = q.Level, CategoryId = q.CategoryId, Explanation = q.Explanation, OwnerId = q.OwnerId
         };
         _showDialog = true;
     }
@@ -266,12 +291,11 @@ else
         }
     }
 
-    private string GetDifficultyBg(DifficultyLevel d) => d switch
+    private string GetLevelColor(int level) => level switch
     {
-        DifficultyLevel.Easy => "#10b981",
-        DifficultyLevel.Medium => "#f59e0b",
-        DifficultyLevel.Hard => "#ef4444",
-        DifficultyLevel.Expert => "#8b5cf6",
-        _ => "#7c3aed"
+        <= 5 => "#10b981",   // Green - Easy
+        <= 10 => "#f59e0b",  // Orange - Medium
+        <= 13 => "#ef4444",  // Red - Hard
+        _ => "#8b5cf6"       // Purple - Expert
     };
 }
