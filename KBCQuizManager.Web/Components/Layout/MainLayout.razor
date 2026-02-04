@@ -1,0 +1,113 @@
+@inherits LayoutComponentBase
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<MudThemeProvider IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@if (_isLoading)
+{
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #1a1a2e;">
+        <div style="color: #7c3aed; font-size: 24px;">Loading...</div>
+    </div>
+}
+else if (_currentUser == null)
+{
+    @Body
+}
+else
+{
+    <div style="display: flex; min-height: 100vh; background: #1a1a2e; font-family: Arial, sans-serif;">
+        <!-- Sidebar -->
+        <div style="width: 240px; background: #16213e; padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto;">
+            <!-- Logo -->
+            <div style="padding: 0 20px 20px; border-bottom: 1px solid #2a3f5f;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 35px; height: 35px; background: #7c3aed; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">K</div>
+                    <span style="color: white; font-size: 18px; font-weight: bold;">KBC Quiz</span>
+                </div>
+            </div>
+            
+            <!-- User Info -->
+            <div style="margin: 15px; padding: 15px; background: #1a1a2e; border-radius: 8px; border: 1px solid #2a3f5f;">
+                <div style="color: white; font-weight: 600;">@_currentUser.FullName</div>
+                <div style="color: #7c3aed; font-size: 12px; margin-top: 3px;">@(_currentUser.Role == UserRole.SuperAdmin ? "Super Admin" : "Admin")</div>
+            </div>
+            
+            <!-- Navigation -->
+            <div style="padding: 0 10px;">
+                <div style="color: #6b7280; font-size: 11px; padding: 15px 10px 8px; text-transform: uppercase; letter-spacing: 1px;">Menu</div>
+                <a href="/" style="display: block; padding: 12px 15px; color: #9ca3af; text-decoration: none; border-radius: 6px; margin-bottom: 3px; @(IsActive("/") ? "background: #7c3aed; color: white;" : "")">📊 Dashboard</a>
+                
+                @if (_currentUser.Role == UserRole.SuperAdmin)
+                {
+                    <div style="color: #6b7280; font-size: 11px; padding: 15px 10px 8px; text-transform: uppercase; letter-spacing: 1px;">Admin</div>
+                    <a href="/superadmin/admins" style="display: block; padding: 12px 15px; color: #9ca3af; text-decoration: none; border-radius: 6px; margin-bottom: 3px; @(IsActive("/superadmin") ? "background: #7c3aed; color: white;" : "")">👥 Manage Admins</a>
+                }
+                
+                <div style="color: #6b7280; font-size: 11px; padding: 15px 10px 8px; text-transform: uppercase; letter-spacing: 1px;">Questions</div>
+                <a href="/admin/categories" style="display: block; padding: 12px 15px; color: #9ca3af; text-decoration: none; border-radius: 6px; margin-bottom: 3px; @(IsActive("/admin/categories") ? "background: #7c3aed; color: white;" : "")">📁 Categories</a>
+                <a href="/admin/questions" style="display: block; padding: 12px 15px; color: #9ca3af; text-decoration: none; border-radius: 6px; margin-bottom: 3px; @(IsActive("/admin/questions") ? "background: #7c3aed; color: white;" : "")">❓ All Questions</a>
+                <a href="/admin/import" style="display: block; padding: 12px 15px; color: #9ca3af; text-decoration: none; border-radius: 6px; margin-bottom: 3px; @(IsActive("/admin/import") ? "background: #7c3aed; color: white;" : "")">📤 Import Questions</a>
+                
+                <div style="color: #6b7280; font-size: 11px; padding: 15px 10px 8px; text-transform: uppercase; letter-spacing: 1px;">Preview</div>
+                <a href="/admin/game-preview" style="display: block; padding: 12px 15px; color: #9ca3af; text-decoration: none; border-radius: 6px; margin-bottom: 3px; @(IsActive("/admin/game") ? "background: #7c3aed; color: white;" : "")">🎮 Game Preview</a>
+                
+                <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #2a3f5f;">
+                    <a href="/account/logout" style="display: block; padding: 12px 15px; color: #ef4444; text-decoration: none; border-radius: 6px;">🚪 Logout</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div style="flex: 1; margin-left: 240px;">
+            <!-- Top Bar -->
+            <div style="height: 60px; background: #16213e; border-bottom: 1px solid #2a3f5f; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; position: sticky; top: 0; z-index: 100;">
+                <span style="padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; margin-right: 15px; @(_currentUser.Role == UserRole.SuperAdmin ? "background: #f59e0b; color: white;" : "background: #3b82f6; color: white;")">
+                    @(_currentUser.Role == UserRole.SuperAdmin ? "Super Admin" : "Admin")
+                </span>
+                <div style="width: 35px; height: 35px; background: #7c3aed; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin-right: 10px;">
+                    @(_currentUser.FirstName?.Length > 0 ? _currentUser.FirstName[0] : 'U')
+                </div>
+                <span style="color: white;">@_currentUser.FirstName</span>
+            </div>
+            
+            <!-- Page Content -->
+            <div style="padding: 25px;">
+                @Body
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private ApplicationUser? _currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (uri.AbsolutePath != "/login" && !uri.AbsolutePath.StartsWith("/account"))
+        {
+            if (await AuthService.IsAuthenticatedAsync())
+            {
+                _currentUser = await AuthService.GetCurrentUserAsync();
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+        }
+        _isLoading = false;
+    }
+
+    private bool IsActive(string path)
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (path == "/") return uri.AbsolutePath == "/";
+        return uri.AbsolutePath.StartsWith(path);
+    }
+}

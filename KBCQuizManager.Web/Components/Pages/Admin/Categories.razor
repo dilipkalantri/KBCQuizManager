@@ -1,0 +1,179 @@
+@page "/admin/categories"
+@inject IAuthService AuthService
+@inject ICategoryService CategoryService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Categories - KBC Quiz Manager</PageTitle>
+
+<!-- Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <div>
+        <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Categories</h1>
+        <p style="color: #9ca3af; margin: 0;">Organize your questions into categories</p>
+    </div>
+    <button @onclick="OpenAddDialog" style="background: #7c3aed; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        ➕ Add Category
+    </button>
+</div>
+
+@if (_isLoading)
+{
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
+}
+else if (_categories.Any())
+{
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        @foreach (var category in _categories)
+        {
+            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                    <div style="width: 50px; height: 50px; background: @(category.Color ?? "#7c3aed"); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📁</div>
+                    <div style="display: flex; gap: 5px;">
+                        <button @onclick="() => OpenEditDialog(category)" style="background: transparent; border: 1px solid #2a3f5f; color: #7c3aed; padding: 8px; border-radius: 6px; cursor: pointer;">✏️</button>
+                        <button @onclick="() => DeleteCategory(category)" style="background: transparent; border: 1px solid #2a3f5f; color: #ef4444; padding: 8px; border-radius: 6px; cursor: pointer;">🗑️</button>
+                    </div>
+                </div>
+                <h3 style="color: white; font-size: 18px; margin: 0 0 8px 0;">@category.Name</h3>
+                @if (!string.IsNullOrEmpty(category.Description))
+                {
+                    <p style="color: #9ca3af; font-size: 14px; margin: 0 0 15px 0;">@category.Description</p>
+                }
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #2a3f5f;">
+                    <span style="background: #2a3f5f; color: #7c3aed; padding: 5px 12px; border-radius: 15px; font-size: 13px; font-weight: 600;">@category.QuestionCount Questions</span>
+                    <span style="color: #6b7280; font-size: 12px;">@category.CreatedAt.ToString("MMM dd, yyyy")</span>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 15px;">📁</div>
+        <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No categories yet</h3>
+        <p style="color: #6b7280; margin: 0 0 20px 0;">Create your first category to start organizing questions</p>
+        <button @onclick="OpenAddDialog" style="background: #7c3aed; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+            Create First Category
+        </button>
+    </div>
+}
+
+<!-- Add/Edit Dialog -->
+@if (_showDialog)
+{
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px; width: 450px; max-width: 90%;">
+            <h2 style="color: white; font-size: 20px; margin: 0 0 20px 0;">@(_isEditMode ? "Edit Category" : "Add Category")</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Category Name *</label>
+                <input @bind="_editingCategory.Name" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" placeholder="Enter category name" />
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Description</label>
+                <textarea @bind="_editingCategory.Description" rows="3" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px; resize: none;" placeholder="Enter description"></textarea>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Color</label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    @foreach (var color in _colorOptions)
+                    {
+                        <div @onclick="() => _editingCategory.Color = color" style="width: 35px; height: 35px; background: @color; border-radius: 8px; cursor: pointer; border: 2px solid @(_editingCategory.Color == color ? "white" : "transparent");"></div>
+                    }
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                <button @onclick="CloseDialog" style="background: transparent; border: 1px solid #2a3f5f; color: #9ca3af; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button @onclick="SaveCategory" disabled="@string.IsNullOrWhiteSpace(_editingCategory.Name)" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; opacity: @(string.IsNullOrWhiteSpace(_editingCategory.Name) ? "0.5" : "1");">
+                    @(_isEditMode ? "Update" : "Create")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private ApplicationUser? _currentUser;
+    private List<Category> _categories = new();
+    private bool _isLoading = true;
+    private bool _showDialog = false;
+    private bool _isEditMode = false;
+    private Category _editingCategory = new();
+
+    private readonly string[] _colorOptions = { "#7c3aed", "#3b82f6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#ec4899", "#8b5cf6" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        _isLoading = true;
+        if (_currentUser != null)
+        {
+            _categories = await CategoryService.GetCategoriesAsync(_currentUser.Id);
+        }
+        _isLoading = false;
+    }
+
+    private void OpenAddDialog()
+    {
+        _isEditMode = false;
+        _editingCategory = new Category { Color = "#7c3aed" };
+        _showDialog = true;
+    }
+
+    private void OpenEditDialog(Category category)
+    {
+        _isEditMode = true;
+        _editingCategory = new Category
+        {
+            Id = category.Id,
+            Name = category.Name,
+            Description = category.Description,
+            Color = category.Color ?? "#7c3aed",
+            OwnerId = category.OwnerId
+        };
+        _showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        _showDialog = false;
+        _editingCategory = new();
+    }
+
+    private async Task SaveCategory()
+    {
+        if (string.IsNullOrWhiteSpace(_editingCategory.Name)) return;
+
+        _editingCategory.OwnerId = _currentUser!.Id;
+        var (success, message) = _isEditMode
+            ? await CategoryService.UpdateCategoryAsync(_editingCategory, _currentUser.Id)
+            : await CategoryService.CreateCategoryAsync(_editingCategory);
+
+        Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+        if (success)
+        {
+            CloseDialog();
+            await LoadCategories();
+        }
+    }
+
+    private async Task DeleteCategory(Category category)
+    {
+        var confirm = await DialogService.ShowMessageBox("Delete Category", $"Delete '{category.Name}'? All questions will also be deleted.", yesText: "Delete", cancelText: "Cancel");
+        if (confirm == true)
+        {
+            var (success, message) = await CategoryService.DeleteCategoryAsync(category.Id, _currentUser!.Id);
+            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (success) await LoadCategories();
+        }
+    }
+}

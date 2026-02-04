@@ -1,0 +1,189 @@
+@page "/admin/import"
+@inject IAuthService AuthService
+@inject IQuestionService QuestionService
+@inject ICategoryService CategoryService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Import Questions - KBC Quiz Manager</PageTitle>
+
+<!-- Header -->
+<div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+    <a href="/admin/questions" style="color: #7c3aed; font-size: 24px; text-decoration: none;">←</a>
+    <div>
+        <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Import Questions</h1>
+        <p style="color: #9ca3af; margin: 0;">Bulk import questions from a CSV file</p>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    <!-- Upload Section -->
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px;">
+        <h2 style="color: white; font-size: 18px; margin: 0 0 20px 0;">📤 Upload CSV File</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Select Category</label>
+            <select @bind="_selectedCategoryId" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
+                @foreach (var cat in _categories)
+                {
+                    <option value="@cat.Id">@cat.Name</option>
+                }
+            </select>
+        </div>
+        
+        <div style="border: 2px dashed #2a3f5f; border-radius: 12px; padding: 40px; text-align: center; background: #1a1a2e; margin-bottom: 20px;">
+            <InputFile OnChange="HandleFileSelected" accept=".csv" style="display: none;" id="fileUpload" />
+            <label for="fileUpload" style="cursor: pointer; display: block;">
+                <div style="font-size: 48px; margin-bottom: 15px;">📁</div>
+                <h3 style="color: white; font-size: 16px; margin: 0 0 8px 0;">
+                    @(_selectedFile != null ? _selectedFile.Name : "Drop your CSV file here")
+                </h3>
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                    @(_selectedFile != null ? $"Size: {FormatFileSize(_selectedFile.Size)}" : "or click to browse")
+                </p>
+            </label>
+        </div>
+        
+        @if (_previewQuestions.Any())
+        {
+            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">Preview (@_previewQuestions.Count questions found)</h3>
+            <div style="max-height: 300px; overflow-y: auto; background: #1a1a2e; border-radius: 8px; margin-bottom: 20px;">
+                @foreach (var (q, idx) in _previewQuestions.Take(10).Select((x, i) => (x, i)))
+                {
+                    <div style="padding: 12px 15px; border-bottom: 1px solid #2a3f5f;">
+                        <p style="color: white; font-size: 14px; margin: 0 0 5px 0;">@(idx + 1). @TruncateText(q.QuestionText, 80)</p>
+                        <p style="color: #6b7280; font-size: 12px; margin: 0;">Answer: @q.CorrectAnswer | Difficulty: @q.Difficulty</p>
+                    </div>
+                }
+                @if (_previewQuestions.Count > 10)
+                {
+                    <div style="padding: 12px; text-align: center; color: #6b7280;">... and @(_previewQuestions.Count - 10) more</div>
+                }
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button @onclick="ClearSelection" style="background: transparent; border: 1px solid #2a3f5f; color: #9ca3af; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Clear</button>
+                <button @onclick="ImportQuestions" disabled="@_isImporting" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; opacity: @(_isImporting ? "0.5" : "1");">
+                    @(_isImporting ? "Importing..." : $"Import {_previewQuestions.Count} Questions")
+                </button>
+            </div>
+        }
+    </div>
+    
+    <!-- Help Section -->
+    <div>
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">ℹ️ CSV Format</h3>
+            <p style="color: #9ca3af; font-size: 14px; margin: 0 0 15px 0;">Your CSV should have these columns:</p>
+            <div style="background: #1a1a2e; padding: 10px; border-radius: 6px; font-size: 12px; color: #7c3aed; word-break: break-all;">
+                Question,OptionA,OptionB,OptionC,OptionD,Answer,Difficulty
+            </div>
+            <p style="color: #6b7280; font-size: 12px; margin: 15px 0 0 0;">
+                • Answer: A, B, C, or D<br/>
+                • Difficulty: Easy, Medium, Hard, Expert
+            </p>
+        </div>
+        
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px;">
+            <h3 style="color: white; font-size: 16px; margin: 0 0 15px 0;">Example Row</h3>
+            <div style="background: #1a1a2e; padding: 10px; border-radius: 6px; font-size: 11px; color: #9ca3af; word-break: break-all;">
+                What is the capital of India?,Mumbai,Delhi,Kolkata,Chennai,B,Easy
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationUser? _currentUser;
+    private List<Category> _categories = new();
+    private Guid _selectedCategoryId;
+    private IBrowserFile? _selectedFile;
+    private List<Question> _previewQuestions = new();
+    private bool _isImporting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        if (_currentUser != null)
+        {
+            _categories = await CategoryService.GetCategoriesAsync(_currentUser.Id);
+            if (_categories.Any()) _selectedCategoryId = _categories.First().Id;
+        }
+    }
+
+    private string TruncateText(string text, int max) => text.Length > max ? text.Substring(0, max) + "..." : text;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _previewQuestions.Clear();
+        try
+        {
+            using var stream = _selectedFile.OpenReadStream(10 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            var lineNum = 0;
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                lineNum++;
+                if (lineNum == 1 && line?.ToLower().Contains("question") == true) continue;
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var parts = ParseCsvLine(line);
+                if (parts.Length >= 7)
+                {
+                    _previewQuestions.Add(new Question
+                    {
+                        QuestionText = parts[0].Trim(),
+                        OptionA = parts[1].Trim(),
+                        OptionB = parts[2].Trim(),
+                        OptionC = parts[3].Trim(),
+                        OptionD = parts[4].Trim(),
+                        CorrectAnswer = ParseAnswer(parts[5].Trim()),
+                        Difficulty = ParseDifficulty(parts[6].Trim())
+                    });
+                }
+            }
+            Snackbar.Add($"Found {_previewQuestions.Count} questions", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        StateHasChanged();
+    }
+
+    private string[] ParseCsvLine(string line)
+    {
+        var result = new List<string>();
+        var current = "";
+        var inQuotes = false;
+        foreach (var c in line)
+        {
+            if (c == '"') inQuotes = !inQuotes;
+            else if (c == ',' && !inQuotes) { result.Add(current); current = ""; }
+            else current += c;
+        }
+        result.Add(current);
+        return result.ToArray();
+    }
+
+    private CorrectOption ParseAnswer(string a) => a.ToUpper() switch { "A" => CorrectOption.A, "B" => CorrectOption.B, "C" => CorrectOption.C, "D" => CorrectOption.D, _ => CorrectOption.A };
+    private DifficultyLevel ParseDifficulty(string d) => d.ToLower() switch { "easy" => DifficultyLevel.Easy, "medium" => DifficultyLevel.Medium, "hard" => DifficultyLevel.Hard, "expert" => DifficultyLevel.Expert, _ => DifficultyLevel.Easy };
+
+    private async Task ImportQuestions()
+    {
+        if (_selectedCategoryId == Guid.Empty || !_previewQuestions.Any()) return;
+        _isImporting = true;
+        var count = 0;
+        foreach (var q in _previewQuestions)
+        {
+            q.CategoryId = _selectedCategoryId;
+            q.OwnerId = _currentUser!.Id;
+            var (ok, _) = await QuestionService.CreateQuestionAsync(q);
+            if (ok) count++;
+        }
+        Snackbar.Add($"Imported {count} questions", Severity.Success);
+        _isImporting = false;
+        NavigationManager.NavigateTo("/admin/questions");
+    }
+
+    private void ClearSelection() { _selectedFile = null; _previewQuestions.Clear(); StateHasChanged(); }
+    private string FormatFileSize(long b) => b >= 1048576 ? $"{b / 1048576.0:F1} MB" : b >= 1024 ? $"{b / 1024.0:F1} KB" : $"{b} bytes";
+}

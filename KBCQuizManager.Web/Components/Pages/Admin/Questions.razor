@@ -1,0 +1,277 @@
+@page "/admin/questions"
+@inject IAuthService AuthService
+@inject IQuestionService QuestionService
+@inject ICategoryService CategoryService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Questions - KBC Quiz Manager</PageTitle>
+
+<!-- Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <div>
+        <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Questions</h1>
+        <p style="color: #9ca3af; margin: 0;">Manage your question bank</p>
+    </div>
+    <button @onclick="OpenAddDialog" style="background: #7c3aed; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        ➕ Add Question
+    </button>
+</div>
+
+<!-- Filters -->
+<div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+        <input @bind="_searchString" @bind:event="oninput" placeholder="Search questions..." style="padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
+        <select @bind="_selectedCategoryId" style="padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
+            <option value="">All Categories</option>
+            @foreach (var cat in _categories)
+            {
+                <option value="@cat.Id">@cat.Name</option>
+            }
+        </select>
+        <select @bind="_selectedDifficulty" style="padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
+            <option value="">All Difficulties</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+            <option value="Expert">Expert</option>
+        </select>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
+}
+else if (FilteredQuestions.Any())
+{
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+        @foreach (var q in FilteredQuestions)
+        {
+            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px;">
+                <!-- Question Header -->
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                    <p style="color: white; font-size: 16px; margin: 0; flex: 1; line-height: 1.5;">@q.QuestionText</p>
+                    <div style="display: flex; gap: 5px; margin-left: 15px;">
+                        <button @onclick="() => OpenEditDialog(q)" style="background: transparent; border: 1px solid #2a3f5f; color: #7c3aed; padding: 8px; border-radius: 6px; cursor: pointer;">✏️</button>
+                        <button @onclick="() => DeleteQuestion(q)" style="background: transparent; border: 1px solid #2a3f5f; color: #ef4444; padding: 8px; border-radius: 6px; cursor: pointer;">🗑️</button>
+                    </div>
+                </div>
+                
+                <!-- Options -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.A ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.A ? "#10b981" : "#2a3f5f");">
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.A ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">A.</span>
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.A ? "white" : "#9ca3af");">@q.OptionA</span>
+                        @if (q.CorrectAnswer == CorrectOption.A) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
+                    </div>
+                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.B ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.B ? "#10b981" : "#2a3f5f");">
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.B ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">B.</span>
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.B ? "white" : "#9ca3af");">@q.OptionB</span>
+                        @if (q.CorrectAnswer == CorrectOption.B) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
+                    </div>
+                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.C ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.C ? "#10b981" : "#2a3f5f");">
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.C ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">C.</span>
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.C ? "white" : "#9ca3af");">@q.OptionC</span>
+                        @if (q.CorrectAnswer == CorrectOption.C) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
+                    </div>
+                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.D ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.D ? "#10b981" : "#2a3f5f");">
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.D ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">D.</span>
+                        <span style="color: @(q.CorrectAnswer == CorrectOption.D ? "white" : "#9ca3af");">@q.OptionD</span>
+                        @if (q.CorrectAnswer == CorrectOption.D) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #2a3f5f;">
+                    <div style="display: flex; gap: 8px;">
+                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: @GetDifficultyBg(q.Difficulty); color: white;">@q.Difficulty</span>
+                        @if (q.Category != null)
+                        {
+                            <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; background: #2a3f5f; color: #7c3aed;">@q.Category.Name</span>
+                        }
+                    </div>
+                    <span style="color: #6b7280; font-size: 13px;">₹@q.PrizeAmount.ToString("N0")</span>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 15px;">❓</div>
+        <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No questions found</h3>
+        <p style="color: #6b7280; margin: 0 0 20px 0;">Add your first question to get started</p>
+        <button @onclick="OpenAddDialog" style="background: #7c3aed; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+            Add Question
+        </button>
+    </div>
+}
+
+<!-- Add/Edit Dialog -->
+@if (_showDialog)
+{
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px;">
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px; width: 700px; max-width: 95%;">
+            <h2 style="color: white; font-size: 20px; margin: 0 0 20px 0;">@(_isEditMode ? "Edit Question" : "Add Question")</h2>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Question *</label>
+                <textarea @bind="_editingQuestion.QuestionText" rows="3" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px; resize: none;" placeholder="Enter question"></textarea>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Option A *</label>
+                    <input @bind="_editingQuestion.OptionA" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
+                </div>
+                <div>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Option B *</label>
+                    <input @bind="_editingQuestion.OptionB" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
+                </div>
+                <div>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Option C *</label>
+                    <input @bind="_editingQuestion.OptionC" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
+                </div>
+                <div>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Option D *</label>
+                    <input @bind="_editingQuestion.OptionD" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Correct Answer</label>
+                    <select @bind="_editingQuestion.CorrectAnswer" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
+                        <option value="@CorrectOption.A">Option A</option>
+                        <option value="@CorrectOption.B">Option B</option>
+                        <option value="@CorrectOption.C">Option C</option>
+                        <option value="@CorrectOption.D">Option D</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Difficulty</label>
+                    <select @bind="_editingQuestion.Difficulty" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
+                        <option value="@DifficultyLevel.Easy">Easy</option>
+                        <option value="@DifficultyLevel.Medium">Medium</option>
+                        <option value="@DifficultyLevel.Hard">Hard</option>
+                        <option value="@DifficultyLevel.Expert">Expert</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Category</label>
+                    <select @bind="_editingQuestion.CategoryId" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
+                        @foreach (var cat in _categories)
+                        {
+                            <option value="@cat.Id">@cat.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                <button @onclick="CloseDialog" style="background: transparent; border: 1px solid #2a3f5f; color: #9ca3af; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button @onclick="SaveQuestion" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                    @(_isEditMode ? "Update" : "Create")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private ApplicationUser? _currentUser;
+    private List<Question> _questions = new();
+    private List<Category> _categories = new();
+    private bool _isLoading = true;
+    private bool _showDialog = false;
+    private bool _isEditMode = false;
+    private Question _editingQuestion = new();
+    private string _searchString = "";
+    private string _selectedCategoryId = "";
+    private string _selectedDifficulty = "";
+
+    private IEnumerable<Question> FilteredQuestions => _questions.Where(q =>
+        (string.IsNullOrEmpty(_searchString) || q.QuestionText.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrEmpty(_selectedCategoryId) || q.CategoryId.ToString() == _selectedCategoryId) &&
+        (string.IsNullOrEmpty(_selectedDifficulty) || q.Difficulty.ToString() == _selectedDifficulty));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        if (_currentUser != null)
+        {
+            _questions = await QuestionService.GetQuestionsAsync(_currentUser.Id);
+            _categories = await CategoryService.GetCategoriesAsync(_currentUser.Id);
+        }
+        _isLoading = false;
+    }
+
+    private void OpenAddDialog()
+    {
+        if (!_categories.Any())
+        {
+            Snackbar.Add("Create a category first", Severity.Warning);
+            return;
+        }
+        _isEditMode = false;
+        _editingQuestion = new Question { CategoryId = _categories.First().Id, Difficulty = DifficultyLevel.Easy };
+        _showDialog = true;
+    }
+
+    private void OpenEditDialog(Question q)
+    {
+        _isEditMode = true;
+        _editingQuestion = new Question
+        {
+            Id = q.Id, QuestionText = q.QuestionText, OptionA = q.OptionA, OptionB = q.OptionB,
+            OptionC = q.OptionC, OptionD = q.OptionD, CorrectAnswer = q.CorrectAnswer,
+            Difficulty = q.Difficulty, CategoryId = q.CategoryId, Explanation = q.Explanation, OwnerId = q.OwnerId
+        };
+        _showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        _showDialog = false;
+        _editingQuestion = new();
+    }
+
+    private async Task SaveQuestion()
+    {
+        if (string.IsNullOrWhiteSpace(_editingQuestion.QuestionText)) return;
+        _editingQuestion.OwnerId = _currentUser!.Id;
+        var (success, message) = _isEditMode
+            ? await QuestionService.UpdateQuestionAsync(_editingQuestion, _currentUser.Id)
+            : await QuestionService.CreateQuestionAsync(_editingQuestion);
+        Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+        if (success) { CloseDialog(); await LoadData(); }
+    }
+
+    private async Task DeleteQuestion(Question q)
+    {
+        var confirm = await DialogService.ShowMessageBox("Delete Question", "Are you sure?", yesText: "Delete", cancelText: "Cancel");
+        if (confirm == true)
+        {
+            var (success, message) = await QuestionService.DeleteQuestionAsync(q.Id, _currentUser!.Id);
+            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (success) await LoadData();
+        }
+    }
+
+    private string GetDifficultyBg(DifficultyLevel d) => d switch
+    {
+        DifficultyLevel.Easy => "#10b981",
+        DifficultyLevel.Medium => "#f59e0b",
+        DifficultyLevel.Hard => "#ef4444",
+        DifficultyLevel.Expert => "#8b5cf6",
+        _ => "#7c3aed"
+    };
+}

@@ -1,0 +1,28 @@
+@namespace KBCQuizManager.Web.Components.Shared
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1">@ContentText</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="@Color">@ButtonText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private MudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] 
+    public string ContentText { get; set; } = "Are you sure?";
+
+    [Parameter] 
+    public string ButtonText { get; set; } = "Confirm";
+
+    [Parameter] 
+    public Color Color { get; set; } = Color.Primary;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    private void Cancel() => MudDialog.Cancel();
+}
