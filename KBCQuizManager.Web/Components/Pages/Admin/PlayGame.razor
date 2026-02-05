@@ -77,7 +77,23 @@ else if (_gameSession != null)
             </div>
         </div>
     }
-    else if (_currentQuestion != null)
+    else if (_currentQuestion == null || _isLoading)
+    {
+        <!-- Loading Screen -->
+        <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 100px 20px;">
+            <div style="font-size: 60px; margin-bottom: 30px; animation: pulse 1.5s ease-in-out infinite;">🎯</div>
+            <h2 style="color: white; margin: 0 0 15px 0;">Loading Question...</h2>
+            <p style="color: #9ca3af; margin: 0;">Level @_gameSession.CurrentLevel</p>
+            <div style="margin-top: 30px;">
+                <div style="width: 50px; height: 50px; border: 4px solid #2a3f5f; border-top-color: #7c3aed; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite;"></div>
+            </div>
+        </div>
+        <style>
+            @@keyframes spin { to { transform: rotate(360deg); } }
+            @@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        </style>
+    }
+    else
     {
         <!-- Game Play Screen -->
         <div style="max-width: 900px; margin: 0 auto;">
@@ -243,6 +259,22 @@ else if (_gameSession != null)
         </div>
     }
 }
+else if (_isPlaying)
+{
+    <!-- Loading Screen when _gameSession is null -->
+    <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 100px 20px;">
+        <div style="font-size: 60px; margin-bottom: 30px; animation: pulse 1.5s ease-in-out infinite;">🎮</div>
+        <h2 style="color: white; margin: 0 0 15px 0;">Starting Game...</h2>
+        <p style="color: #9ca3af; margin: 0;">@_playerName</p>
+        <div style="margin-top: 30px;">
+            <div style="width: 50px; height: 50px; border: 4px solid #2a3f5f; border-top-color: #7c3aed; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite;"></div>
+        </div>
+    </div>
+    <style>
+        @@keyframes spin { to { transform: rotate(360deg); } }
+        @@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+    </style>
+}
 
 @code {
     private ApplicationUser? _currentUser;
@@ -251,6 +283,8 @@ else if (_gameSession != null)
     private string _playerName = "";
     private bool _isPlaying = false;
     private bool _gameFinished = false;
+    private bool _isDisposed = false;
+    private bool _isLoading = false;
     
     private GameSession? _gameSession;
     private Question? _currentQuestion;
@@ -297,27 +331,49 @@ else if (_gameSession != null)
     {
         if (_gameSession == null) return;
         
-        _currentQuestion = await GameService.GetQuestionForLevelAsync(_gameSession.CurrentLevel, _currentUser!.Id, _usedQuestionIds);
+        // Stop any existing timer
+        _timer?.Dispose();
+        _timer = null;
         
-        if (_currentQuestion == null)
+        _isLoading = true;
+        _currentQuestion = null;
+        StateHasChanged();
+        
+        try
         {
-            Snackbar.Add($"No question available for level {_gameSession.CurrentLevel}", Severity.Error);
-            return;
+            // Small delay for UI to update
+            await Task.Delay(100);
+            
+            _currentQuestion = await GameService.GetQuestionForLevelAsync(_gameSession.CurrentLevel, _currentUser!.Id, _usedQuestionIds);
+            
+            if (_currentQuestion == null)
+            {
+                Snackbar.Add($"No question available for level {_gameSession.CurrentLevel}", Severity.Error);
+                _isLoading = false;
+                return;
+            }
+            
+            _usedQuestionIds.Add(_currentQuestion.Id);
+            _selectedAnswer = null;
+            _showAnswer = false;
+            _isCorrect = false;
+            _hiddenOptions.Clear();
+            _lifelineResult = "";
+            _audiencePoll = null;
+            _currentLifelineUsage = new();
+            
+            _isLoading = false;
+            
+            // Start timer
+            _timeRemaining = _currentQuestion.GetTimeLimitForLevel();
+            _timeTaken = 0;
+            StartTimer();
         }
-        
-        _usedQuestionIds.Add(_currentQuestion.Id);
-        _selectedAnswer = null;
-        _showAnswer = false;
-        _isCorrect = false;
-        _hiddenOptions.Clear();
-        _lifelineResult = "";
-        _audiencePoll = null;
-        _currentLifelineUsage = new();
-        
-        // Start timer
-        _timeRemaining = _currentQuestion.GetTimeLimitForLevel();
-        _timeTaken = 0;
-        StartTimer();
+        catch (Exception ex)
+        {
+            _isLoading = false;
+            Snackbar.Add($"Error loading question: {ex.Message}", Severity.Error);
+        }
     }
 
     private void StartTimer()
@@ -325,21 +381,34 @@ else if (_gameSession != null)
         _timer?.Dispose();
         _timer = new System.Threading.Timer(async _ =>
         {
-            _timeRemaining--;
-            _timeTaken++;
-            
-            if (_timeRemaining <= 0)
+            try
             {
-                _timer?.Dispose();
-                await InvokeAsync(async () =>
+                if (_timer == null || _isDisposed) return; // Timer was disposed or component is disposed
+                
+                _timeRemaining--;
+                _timeTaken++;
+                
+                if (_timeRemaining <= 0)
                 {
-                    await TimeOut();
-                    StateHasChanged();
-                });
+                    _timer?.Dispose();
+                    _timer = null;
+                    if (!_isDisposed)
+                    {
+                        await InvokeAsync(async () =>
+                        {
+                            await TimeOut();
+                            StateHasChanged();
+                        });
+                    }
+                }
+                else if (!_isDisposed)
+                {
+                    await InvokeAsync(StateHasChanged);
+                }
             }
-            else
+            catch
             {
-                await InvokeAsync(StateHasChanged);
+                // Ignore errors if component is disposed
             }
         }, null, 1000, 1000);
     }
@@ -347,11 +416,20 @@ else if (_gameSession != null)
     private async Task TimeOut()
     {
         _timer?.Dispose();
+        _timer = null;
         _showAnswer = true;
         _isCorrect = false;
         
-        _gameSession = await GameService.RecordAnswerAsync(_gameSession!.Id, _currentQuestion!.Id, null, _timeTaken, true, _currentLifelineUsage);
-        _gameFinished = true;
+        try
+        {
+            _gameSession = await GameService.RecordAnswerAsync(_gameSession!.Id, _currentQuestion!.Id, null, _timeTaken, true, _currentLifelineUsage);
+            _gameFinished = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error recording timeout: {ex.Message}", Severity.Error);
+            _gameFinished = true;
+        }
     }
 
     private void SelectAnswer(CorrectOption answer)
@@ -364,33 +442,56 @@ else if (_gameSession != null)
     {
         if (!_selectedAnswer.HasValue || _currentQuestion == null || _gameSession == null) return;
         
+        // Stop the timer first
         _timer?.Dispose();
+        _timer = null;
+        
         _showAnswer = true;
         _isCorrect = _selectedAnswer == _currentQuestion.CorrectAnswer;
         
-        _gameSession = await GameService.RecordAnswerAsync(_gameSession.Id, _currentQuestion.Id, _selectedAnswer, _timeTaken, false, _currentLifelineUsage);
-        
-        if (!_isCorrect || _gameSession.CurrentLevel > 15)
+        try
         {
-            _gameFinished = _gameSession.Status != GameStatus.InProgress;
+            _gameSession = await GameService.RecordAnswerAsync(_gameSession.Id, _currentQuestion.Id, _selectedAnswer, _timeTaken, false, _currentLifelineUsage);
+            
+            if (!_isCorrect || _gameSession.Status != GameStatus.InProgress)
+            {
+                _gameFinished = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error recording answer: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task NextQuestion()
     {
+        // Stop any running timer first
+        _timer?.Dispose();
+        _timer = null;
+        
         if (_gameSession?.Status == GameStatus.Won)
         {
             _gameFinished = true;
         }
         else
         {
-            await LoadQuestion();
+            try
+            {
+                await LoadQuestion();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error loading next question: {ex.Message}", Severity.Error);
+                _gameFinished = true;
+            }
         }
     }
 
     private async Task QuitGame()
     {
         _timer?.Dispose();
+        _timer = null;
         _gameSession = await GameService.QuitGameAsync(_gameSession!.Id);
         _gameFinished = true;
     }
@@ -402,7 +503,10 @@ else if (_gameSession != null)
 
     private void ResetGame()
     {
+        _timer?.Dispose();
+        _timer = null;
         _isPlaying = false;
+        _isLoading = false;
         _gameFinished = false;
         _gameSession = null;
         _currentQuestion = null;
@@ -412,40 +516,85 @@ else if (_gameSession != null)
     // Lifelines
     private async Task UseFiftyFifty()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.FiftyFiftyUsed) return;
+        if (_gameSession == null || _currentQuestion == null || _gameSession.FiftyFiftyUsed || _showAnswer) return;
         
-        var (removed, _) = await GameService.GetFiftyFiftyOptionsAsync(_currentQuestion);
-        _hiddenOptions = removed;
-        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.FiftyFifty);
-        _currentLifelineUsage.FiftyFifty = true;
+        try
+        {
+            var (removed, _) = await GameService.GetFiftyFiftyOptionsAsync(_currentQuestion);
+            _hiddenOptions = removed;
+            _gameSession.FiftyFiftyUsed = true; // Update locally to prevent double-click
+            _currentLifelineUsage.FiftyFifty = true;
+            
+            // Update in database (fire and forget to avoid blocking UI)
+            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.FiftyFifty);
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error using 50:50: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task UsePhoneAFriend()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.PhoneAFriendUsed) return;
+        if (_gameSession == null || _currentQuestion == null || _gameSession.PhoneAFriendUsed || _showAnswer) return;
         
-        _lifelineResult = await GameService.GetPhoneAFriendHintAsync(_currentQuestion);
-        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.PhoneAFriend);
-        _currentLifelineUsage.PhoneAFriend = true;
+        try
+        {
+            _lifelineResult = await GameService.GetPhoneAFriendHintAsync(_currentQuestion);
+            _gameSession.PhoneAFriendUsed = true; // Update locally
+            _currentLifelineUsage.PhoneAFriend = true;
+            
+            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.PhoneAFriend);
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error using Phone a Friend: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task UseAudiencePoll()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.AudiencePollUsed) return;
+        if (_gameSession == null || _currentQuestion == null || _gameSession.AudiencePollUsed || _showAnswer) return;
         
-        _audiencePoll = await GameService.GetAudiencePollAsync(_currentQuestion);
-        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.AudiencePoll);
-        _currentLifelineUsage.AudiencePoll = true;
+        try
+        {
+            _audiencePoll = await GameService.GetAudiencePollAsync(_currentQuestion);
+            _gameSession.AudiencePollUsed = true; // Update locally
+            _currentLifelineUsage.AudiencePoll = true;
+            
+            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.AudiencePoll);
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error using Audience Poll: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task UseExpertAdvice()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.ExpertAdviceUsed) return;
+        if (_gameSession == null || _currentQuestion == null || _gameSession.ExpertAdviceUsed || _showAnswer) return;
         
-        var (answer, confidence) = await GameService.GetExpertAdviceAsync(_currentQuestion);
-        _lifelineResult = $"🎓 Expert says: \"I'm {confidence}% confident the answer is Option {answer}\"";
-        _gameSession = await GameService.UseLifelineAsync(_gameSession.Id, LifelineType.ExpertAdvice);
-        _currentLifelineUsage.ExpertAdvice = true;
+        try
+        {
+            var (answer, confidence) = await GameService.GetExpertAdviceAsync(_currentQuestion);
+            _lifelineResult = $"🎓 Expert says: \"I'm {confidence}% confident the answer is Option {answer}\"";
+            _gameSession.ExpertAdviceUsed = true; // Update locally
+            _currentLifelineUsage.ExpertAdvice = true;
+            
+            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.ExpertAdvice);
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error using Expert Advice: {ex.Message}", Severity.Error);
+        }
     }
 
     private List<(string Label, string Text, CorrectOption Answer)> GetCurrentOptions() => _currentQuestion == null
@@ -460,6 +609,8 @@ else if (_gameSession != null)
 
     public void Dispose()
     {
+        _isDisposed = true;
         _timer?.Dispose();
+        _timer = null;
     }
 }
