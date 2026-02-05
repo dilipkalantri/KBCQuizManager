@@ -1,0 +1,57 @@
+@page "/home"
+@layout EmptyLayout
+@inject NavigationManager NavigationManager
+
+<PageTitle>InternsPlay - Challenge Your Knowledge!</PageTitle>
+
+<MudThemeProvider IsDarkMode="true" />
+
+<style>
+    .pub-page { min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); display: flex; flex-direction: column; font-family: 'Roboto', Arial, sans-serif; }
+    .pub-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; }
+    .pub-logo { width: 90px; height: 90px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; font-weight: 800; color: white; box-shadow: 0 20px 60px rgba(124, 58, 237, 0.3); }
+    .pub-title { font-size: 3rem; font-weight: 800; margin: 0 0 8px; background: linear-gradient(135deg, #c084fc, #818cf8, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .pub-sub { color: #94a3b8; font-size: 1.1rem; margin: 0 0 48px; max-width: 500px; line-height: 1.6; }
+    .pub-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 700px; width: 100%; }
+    .pub-card { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 16px; padding: 32px 24px; text-align: center; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px); text-decoration: none; display: block; }
+    .pub-card:hover { transform: translateY(-4px); border-color: #7c3aed; box-shadow: 0 20px 40px rgba(124, 58, 237, 0.15); }
+    .pub-card-icon { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 32px; }
+    .pub-card-title { color: white; font-size: 1.25rem; font-weight: 700; margin: 0 0 8px; }
+    .pub-card-desc { color: #94a3b8; font-size: 0.9rem; margin: 0; line-height: 1.5; }
+    .pub-footer { padding: 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); }
+    .pub-footer a { color: #818cf8; text-decoration: none; font-size: 0.875rem; }
+    .pub-footer a:hover { text-decoration: underline; }
+    @@media (max-width: 600px) {
+        .pub-title { font-size: 2rem; }
+        .pub-cards { grid-template-columns: 1fr; max-width: 400px; }
+        .pub-card { padding: 24px 20px; }
+    }
+</style>
+
+<div class="pub-page">
+    <div class="pub-hero">
+        <div class="pub-logo">IP</div>
+        <h1 class="pub-title">InternsPlay</h1>
+        <p class="pub-sub">Challenge your knowledge with quizzes created by your team leads. Play solo or compete with friends in real-time multiplayer!</p>
+        
+        <div class="pub-cards">
+            <!-- Play Solo -->
+            <a class="pub-card" href="/play-solo">
+                <div class="pub-card-icon" style="background: linear-gradient(135deg, #059669, #10b981);">🎮</div>
+                <h3 class="pub-card-title">Play Solo</h3>
+                <p class="pub-card-desc">Enter your admin code, pick a category, and test your knowledge at your own pace.</p>
+            </a>
+            
+            <!-- Join Multiplayer -->
+            <a class="pub-card" href="/join">
+                <div class="pub-card-icon" style="background: linear-gradient(135deg, #7c3aed, #a855f7);">👥</div>
+                <h3 class="pub-card-title">Join Multiplayer</h3>
+                <p class="pub-card-desc">Enter a room code to join a live game and compete with others in real-time!</p>
+            </a>
+        </div>
+    </div>
+    
+    <div class="pub-footer">
+        <a href="/login">🔐 Admin Login</a>
+    </div>
+</div>

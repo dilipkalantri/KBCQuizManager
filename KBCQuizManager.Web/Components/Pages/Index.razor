@@ -4,14 +4,14 @@
 @inject ICategoryService CategoryService
 @inject IGameService GameService
 
-<PageTitle>Dashboard - KBC Quiz Manager</PageTitle>
+<PageTitle>Dashboard - InternsPlay</PageTitle>
 
 @if (_currentUser != null)
 {
     <!-- Welcome -->
     <div style="margin-bottom: 30px;">
         <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Welcome back, @_currentUser.FirstName! 👋</h1>
-        <p style="color: #9ca3af; margin: 0;">Here's your KBC quiz management overview.</p>
+        <p style="color: #9ca3af; margin: 0;">Here's your InternsPlay management overview.</p>
     </div>
     
     <!-- Stats Cards -->
@@ -64,7 +64,7 @@
             <a href="/admin/play" style="text-decoration: none;">
                 <div style="background: linear-gradient(135deg, #7c3aed, #6366f1); border-radius: 10px; padding: 20px; transition: all 0.2s;">
                     <div style="font-size: 28px; margin-bottom: 10px;">🎮</div>
-                    <h3 style="color: white; font-size: 16px; margin: 0 0 5px 0;">Play KBC</h3>
+                    <h3 style="color: white; font-size: 16px; margin: 0 0 5px 0;">Play Game</h3>
                     <p style="color: rgba(255,255,255,0.7); font-size: 13px; margin: 0;">Start a new game</p>
                 </div>
             </a>

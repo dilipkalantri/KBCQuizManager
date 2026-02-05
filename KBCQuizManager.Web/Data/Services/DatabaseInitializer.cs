@@ -36,7 +36,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             await _context.Database.EnsureCreatedAsync();
             _logger.LogInformation("Database created/verified successfully");
             
-            // Auto-migrate: Add IsHost column if missing
+            // Auto-migrate: Add new columns/tables if missing
             await RunMigrationsAsync();
             
             // Check if SuperAdmin exists
@@ -47,6 +47,9 @@ public class DatabaseInitializer : IDatabaseInitializer
             {
                 await CreateSuperAdminAsync();
             }
+            
+            // Generate admin codes for any admins that don't have one
+            await GenerateAdminCodesAsync();
         }
         catch (Exception ex)
         {
@@ -57,7 +60,6 @@ public class DatabaseInitializer : IDatabaseInitializer
     
     private async Task CreateSuperAdminAsync()
     {
-        // Get SuperAdmin credentials from configuration or use defaults
         var superAdminEmail = _configuration["SuperAdmin:Email"] ?? "admin@kbcquiz.com";
         var superAdminPassword = _configuration["SuperAdmin:Password"] ?? "Admin@123456";
         var superAdminFirstName = _configuration["SuperAdmin:FirstName"] ?? "Super";
@@ -72,16 +74,15 @@ public class DatabaseInitializer : IDatabaseInitializer
             Role = UserRole.SuperAdmin,
             IsActive = true,
             EmailConfirmed = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            AdminCode = ApplicationUser.GenerateAdminCode()
         };
         
         var result = await _userManager.CreateAsync(superAdmin, superAdminPassword);
         
         if (result.Succeeded)
         {
-            _logger.LogInformation("SuperAdmin created successfully: {Email}", superAdminEmail);
-            _logger.LogWarning("Default SuperAdmin credentials - Email: {Email}, Password: {Password}. Please change immediately!", 
-                superAdminEmail, superAdminPassword);
+            _logger.LogInformation("SuperAdmin created successfully: {Email} with code: {Code}", superAdminEmail, superAdmin.AdminCode);
         }
         else
         {
@@ -91,29 +92,103 @@ public class DatabaseInitializer : IDatabaseInitializer
         }
     }
     
-    private async Task RunMigrationsAsync()
+    private async Task GenerateAdminCodesAsync()
     {
         try
         {
-            // Check if IsHost column exists on MultiplayerPlayers table
-            var conn = _context.Database.GetDbConnection();
-            await conn.OpenAsync();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"SELECT column_name FROM information_schema.columns 
-                                WHERE table_name = 'MultiplayerPlayers' AND column_name = 'IsHost'";
-            var result = await cmd.ExecuteScalarAsync();
-            if (result == null)
+            var adminsWithoutCode = await _context.Users
+                .Where(u => u.AdminCode == null || u.AdminCode == "")
+                .ToListAsync();
+            
+            if (adminsWithoutCode.Any())
             {
-                _logger.LogInformation("Adding IsHost column to MultiplayerPlayers table...");
-                using var alterCmd = conn.CreateCommand();
-                alterCmd.CommandText = @"ALTER TABLE ""MultiplayerPlayers"" ADD COLUMN ""IsHost"" boolean NOT NULL DEFAULT false";
-                await alterCmd.ExecuteNonQueryAsync();
-                _logger.LogInformation("IsHost column added successfully");
+                var existingCodes = await _context.Users
+                    .Where(u => u.AdminCode != null)
+                    .Select(u => u.AdminCode!)
+                    .ToListAsync();
+                
+                foreach (var admin in adminsWithoutCode)
+                {
+                    string code;
+                    do
+                    {
+                        code = ApplicationUser.GenerateAdminCode();
+                    } while (existingCodes.Contains(code));
+                    
+                    admin.AdminCode = code;
+                    existingCodes.Add(code);
+                    _logger.LogInformation("Generated admin code {Code} for user {Email}", code, admin.Email);
+                }
+                
+                await _context.SaveChangesAsync();
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Migration check failed (table may not exist yet, which is fine)");
+            _logger.LogWarning(ex, "Error generating admin codes (columns may not exist yet)");
+        }
+    }
+    
+    private async Task RunMigrationsAsync()
+    {
+        try
+        {
+            var conn = _context.Database.GetDbConnection();
+            await conn.OpenAsync();
+            
+            // Migration: Add IsHost column to MultiplayerPlayers
+            await AddColumnIfMissing(conn, "MultiplayerPlayers", "IsHost", @"ALTER TABLE ""MultiplayerPlayers"" ADD COLUMN ""IsHost"" boolean NOT NULL DEFAULT false");
+            
+            // Migration: Add AdminCode column to Users
+            await AddColumnIfMissing(conn, "Users", "AdminCode", @"ALTER TABLE ""Users"" ADD COLUMN ""AdminCode"" text");
+            
+            // Migration: Create PublicUsers table
+            await CreateTableIfMissing(conn, "PublicUsers", @"
+                CREATE TABLE ""PublicUsers"" (
+                    ""Id"" uuid NOT NULL,
+                    ""Name"" text NOT NULL,
+                    ""Email"" text,
+                    ""AdminId"" uuid NOT NULL,
+                    ""RegisteredAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
+                    ""GamesPlayed"" integer NOT NULL DEFAULT 0,
+                    ""TotalScore"" integer NOT NULL DEFAULT 0,
+                    CONSTRAINT ""PK_PublicUsers"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_PublicUsers_Users_AdminId"" FOREIGN KEY (""AdminId"") REFERENCES ""Users""(""Id"") ON DELETE CASCADE
+                )");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Migration check failed (some tables may not exist yet)");
+        }
+    }
+    
+    private async Task AddColumnIfMissing(System.Data.Common.DbConnection conn, string table, string column, string alterSql)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_name = '{table}' AND column_name = '{column}'";
+        var result = await cmd.ExecuteScalarAsync();
+        if (result == null)
+        {
+            _logger.LogInformation("Adding {Column} column to {Table} table...", column, table);
+            using var alterCmd = conn.CreateCommand();
+            alterCmd.CommandText = alterSql;
+            await alterCmd.ExecuteNonQueryAsync();
+            _logger.LogInformation("{Column} column added successfully", column);
+        }
+    }
+    
+    private async Task CreateTableIfMissing(System.Data.Common.DbConnection conn, string table, string createSql)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT table_name FROM information_schema.tables WHERE table_name = '{table}'";
+        var result = await cmd.ExecuteScalarAsync();
+        if (result == null)
+        {
+            _logger.LogInformation("Creating {Table} table...", table);
+            using var createCmd = conn.CreateCommand();
+            createCmd.CommandText = createSql;
+            await createCmd.ExecuteNonQueryAsync();
+            _logger.LogInformation("{Table} table created successfully", table);
         }
     }
 }

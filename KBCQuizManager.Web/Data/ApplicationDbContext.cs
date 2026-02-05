@@ -16,6 +16,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<GameSession> GameSessions => Set<GameSession>();
     public DbSet<GameSessionAnswer> GameSessionAnswers => Set<GameSessionAnswer>();
+    public DbSet<PublicUser> PublicUsers => Set<PublicUser>();
     
     // Multiplayer
     public DbSet<MultiplayerGame> MultiplayerGames => Set<MultiplayerGame>();
@@ -31,6 +32,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         {
             entity.ToTable("Users");
             entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.AdminCode).IsUnique().HasFilter(@"""AdminCode"" IS NOT NULL");
             
             entity.HasMany(u => u.Categories)
                 .WithOne(c => c.Owner)
@@ -46,36 +48,27 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .WithMany()
                 .HasForeignKey(u => u.CreatedById)
                 .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasMany(u => u.PublicUsers)
+                .WithOne(p => p.Admin)
+                .HasForeignKey(p => p.AdminId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
         
-        builder.Entity<IdentityRole<Guid>>(entity =>
-        {
-            entity.ToTable("Roles");
-        });
+        builder.Entity<IdentityRole<Guid>>(entity => { entity.ToTable("Roles"); });
+        builder.Entity<IdentityUserRole<Guid>>(entity => { entity.ToTable("UserRoles"); });
+        builder.Entity<IdentityUserClaim<Guid>>(entity => { entity.ToTable("UserClaims"); });
+        builder.Entity<IdentityUserLogin<Guid>>(entity => { entity.ToTable("UserLogins"); });
+        builder.Entity<IdentityRoleClaim<Guid>>(entity => { entity.ToTable("RoleClaims"); });
+        builder.Entity<IdentityUserToken<Guid>>(entity => { entity.ToTable("UserTokens"); });
         
-        builder.Entity<IdentityUserRole<Guid>>(entity =>
+        // PublicUser configuration
+        builder.Entity<PublicUser>(entity =>
         {
-            entity.ToTable("UserRoles");
-        });
-        
-        builder.Entity<IdentityUserClaim<Guid>>(entity =>
-        {
-            entity.ToTable("UserClaims");
-        });
-        
-        builder.Entity<IdentityUserLogin<Guid>>(entity =>
-        {
-            entity.ToTable("UserLogins");
-        });
-        
-        builder.Entity<IdentityRoleClaim<Guid>>(entity =>
-        {
-            entity.ToTable("RoleClaims");
-        });
-        
-        builder.Entity<IdentityUserToken<Guid>>(entity =>
-        {
-            entity.ToTable("UserTokens");
+            entity.ToTable("PublicUsers");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.AdminId);
+            entity.HasIndex(e => new { e.AdminId, e.Name });
         });
         
         // Category configuration

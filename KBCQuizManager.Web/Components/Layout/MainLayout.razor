@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject IAuthService AuthService
+@inject IUserService UserService
 @inject NavigationManager NavigationManager
 
 <MudThemeProvider IsDarkMode="true" />
@@ -31,14 +32,24 @@ else
             
             <div style="padding: 0 20px 20px; border-bottom: 1px solid #2a3f5f;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 35px; height: 35px; background: #7c3aed; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">K</div>
-                    <span style="color: white; font-size: 18px; font-weight: bold;">KBC Quiz</span>
+                    <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">IP</div>
+                    <span style="color: white; font-size: 18px; font-weight: bold;">InternsPlay</span>
                 </div>
             </div>
             
             <div style="margin: 15px; padding: 12px; background: #1a1a2e; border-radius: 8px; border: 1px solid #2a3f5f;">
                 <div style="color: white; font-weight: 600; font-size: 14px;">@_currentUser.FullName</div>
                 <div style="color: #7c3aed; font-size: 12px; margin-top: 2px;">@(_currentUser.Role == UserRole.SuperAdmin ? "Super Admin" : "Admin")</div>
+                @if (!string.IsNullOrEmpty(_currentUser.AdminCode))
+                {
+                    <div style="margin-top: 8px; padding: 6px 10px; background: rgba(124, 58, 237, 0.15); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Your Code</div>
+                            <div style="color: #a855f7; font-size: 16px; font-weight: 700; letter-spacing: 2px;">@_currentUser.AdminCode</div>
+                        </div>
+                        <button @onclick="CopyAdminCode" style="background: transparent; border: none; color: #9ca3af; cursor: pointer; font-size: 14px; padding: 4px;" title="Copy code">📋</button>
+                    </div>
+                }
             </div>
             
             <div style="padding: 0 10px;">
@@ -56,12 +67,16 @@ else
                 <a href="/admin/questions" class="nav-link @(IsActive("/admin/questions") ? "active" : "")" @onclick="CloseDrawer">❓ All Questions</a>
                 <a href="/admin/import" class="nav-link @(IsActive("/admin/import") ? "active" : "")" @onclick="CloseDrawer">📤 Import JSON</a>
                 
+                <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Users</div>
+                <a href="/admin/users" class="nav-link @(IsActive("/admin/users") ? "active" : "")" @onclick="CloseDrawer">👤 Registered Users</a>
+                
                 <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Game</div>
-                <a href="/admin/play" class="nav-link @(IsActive("/admin/play") ? "active" : "")" @onclick="CloseDrawer">🎮 Play KBC</a>
+                <a href="/admin/play" class="nav-link @(IsActive("/admin/play") ? "active" : "")" @onclick="CloseDrawer">🎮 Play Game</a>
                 <a href="/admin/multiplayer" class="nav-link @(IsActive("/admin/multiplayer") ? "active" : "")" @onclick="CloseDrawer">👥 Multiplayer</a>
                 <a href="/admin/game-history" class="nav-link @(IsActive("/admin/game-history") ? "active" : "")" @onclick="CloseDrawer">📊 Game History</a>
                 
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #2a3f5f;">
+                    <a href="/home" class="nav-link" style="color: #10b981;" @onclick="CloseDrawer">🌐 Public Home</a>
                     <a href="/account/logout" class="nav-link" style="color: #ef4444;">🚪 Logout</a>
                 </div>
             </div>
@@ -93,6 +108,8 @@ else
     private ApplicationUser? _currentUser;
     private bool _drawerOpen = false;
 
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
     protected override async Task OnInitializedAsync()
     {
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
@@ -113,6 +130,14 @@ else
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
     private void CloseDrawer() => _drawerOpen = false;
+
+    private async Task CopyAdminCode()
+    {
+        if (_currentUser?.AdminCode != null)
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _currentUser.AdminCode);
+        }
+    }
 
     private bool IsActive(string path)
     {

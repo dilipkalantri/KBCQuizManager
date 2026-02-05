@@ -3,11 +3,12 @@
 @inject IUserService UserService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Manage Admins - KBC Quiz Manager</PageTitle>
+<PageTitle>Manage Admins - InternsPlay</PageTitle>
 
 <!-- Header -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px;">
     <div>
         <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Manage Admins</h1>
         <p style="color: #9ca3af; margin: 0;">Create and manage quiz administrators</p>
@@ -27,7 +28,7 @@ else if (_admins.Any())
         @foreach (var admin in _admins)
         {
             <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <div style="width: 50px; height: 50px; background: @(admin.IsActive ? "#7c3aed" : "#4b5563"); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 20px;">
                             @(admin.FirstName?.Length > 0 ? admin.FirstName[0] : 'A')
@@ -37,6 +38,17 @@ else if (_admins.Any())
                             <p style="color: #9ca3af; font-size: 14px; margin: 0;">@admin.Email</p>
                         </div>
                     </div>
+                    
+                    <!-- Admin Code -->
+                    <div style="background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; padding: 10px 15px; display: flex; align-items: center; gap: 10px;">
+                        <div>
+                            <div style="color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Admin Code</div>
+                            <div style="color: #a855f7; font-size: 18px; font-weight: 700; letter-spacing: 3px; font-family: monospace;">@(admin.AdminCode ?? "N/A")</div>
+                        </div>
+                        <button @onclick="() => CopyCode(admin.AdminCode)" style="background: transparent; border: 1px solid #2a3f5f; color: #9ca3af; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Copy code">📋</button>
+                        <button @onclick="() => RegenerateCode(admin)" style="background: transparent; border: 1px solid #2a3f5f; color: #f59e0b; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Generate new code">🔄</button>
+                    </div>
+                    
                     <div style="display: flex; align-items: center; gap: 20px;">
                         <div style="text-align: right;">
                             <span style="display: inline-block; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; background: @(admin.IsActive ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"); color: @(admin.IsActive ? "#10b981" : "#ef4444");">
@@ -94,6 +106,10 @@ else
             <div style="margin-bottom: 20px;">
                 <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Password *</label>
                 <input @bind="_password" type="password" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
+            </div>
+            
+            <div style="background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                <p style="color: #a855f7; margin: 0; font-size: 13px;">💡 A unique Admin Code will be auto-generated. The admin can share this code with users to give them access to play games.</p>
             </div>
             
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -157,6 +173,26 @@ else
         else
         {
             Snackbar.Add(message, Severity.Error);
+        }
+    }
+
+    private async Task CopyCode(string? code)
+    {
+        if (!string.IsNullOrEmpty(code))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", code);
+            Snackbar.Add("Admin code copied!", Severity.Info);
+        }
+    }
+
+    private async Task RegenerateCode(ApplicationUser admin)
+    {
+        var confirm = await DialogService.ShowMessageBox("Regenerate Code", $"Generate a new code for '{admin.FullName}'? The old code will stop working.", yesText: "Regenerate", cancelText: "Cancel");
+        if (confirm == true)
+        {
+            var (success, message) = await UserService.RegenerateAdminCodeAsync(admin.Id);
+            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (success) await LoadAdmins();
         }
     }
 

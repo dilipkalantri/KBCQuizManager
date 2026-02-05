@@ -5,10 +5,10 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Questions - KBC Quiz Manager</PageTitle>
+<PageTitle>Questions - InternsPlay</PageTitle>
 
 <!-- Header -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px;">
     <div>
         <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Questions</h1>
         <p style="color: #9ca3af; margin: 0;">Manage your question bank by level (1-15)</p>
@@ -56,10 +56,15 @@
 {
     <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
 }
-else if (FilteredQuestions.Any())
+else if (PagedQuestions.Any())
 {
+    <!-- Page info -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <span style="color: #9ca3af; font-size: 14px;">Showing @((_page - 1) * _pageSize + 1)-@(Math.Min(_page * _pageSize, FilteredCount)) of @FilteredCount questions</span>
+    </div>
+
     <div style="display: flex; flex-direction: column; gap: 15px;">
-        @foreach (var q in FilteredQuestions)
+        @foreach (var q in PagedQuestions)
         {
             <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px;">
                 <!-- Question Header -->
@@ -73,26 +78,15 @@ else if (FilteredQuestions.Any())
                 
                 <!-- Options -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.A ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.A ? "#10b981" : "#2a3f5f");">
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.A ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">A.</span>
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.A ? "white" : "#9ca3af");">@q.OptionA</span>
-                        @if (q.CorrectAnswer == CorrectOption.A) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
-                    </div>
-                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.B ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.B ? "#10b981" : "#2a3f5f");">
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.B ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">B.</span>
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.B ? "white" : "#9ca3af");">@q.OptionB</span>
-                        @if (q.CorrectAnswer == CorrectOption.B) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
-                    </div>
-                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.C ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.C ? "#10b981" : "#2a3f5f");">
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.C ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">C.</span>
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.C ? "white" : "#9ca3af");">@q.OptionC</span>
-                        @if (q.CorrectAnswer == CorrectOption.C) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
-                    </div>
-                    <div style="padding: 12px 15px; border-radius: 8px; background: @(q.CorrectAnswer == CorrectOption.D ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(q.CorrectAnswer == CorrectOption.D ? "#10b981" : "#2a3f5f");">
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.D ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">D.</span>
-                        <span style="color: @(q.CorrectAnswer == CorrectOption.D ? "white" : "#9ca3af");">@q.OptionD</span>
-                        @if (q.CorrectAnswer == CorrectOption.D) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
-                    </div>
+                    @foreach (var opt in new[] { ("A", q.OptionA, CorrectOption.A), ("B", q.OptionB, CorrectOption.B), ("C", q.OptionC, CorrectOption.C), ("D", q.OptionD, CorrectOption.D) })
+                    {
+                        var isCorrect = q.CorrectAnswer == opt.Item3;
+                        <div style="padding: 12px 15px; border-radius: 8px; background: @(isCorrect ? "rgba(16, 185, 129, 0.15)" : "#1a1a2e"); border: 1px solid @(isCorrect ? "#10b981" : "#2a3f5f");">
+                            <span style="color: @(isCorrect ? "#10b981" : "#9ca3af"); font-weight: 600; margin-right: 8px;">@opt.Item1.</span>
+                            <span style="color: @(isCorrect ? "white" : "#9ca3af");">@opt.Item2</span>
+                            @if (isCorrect) { <span style="color: #10b981; margin-left: 8px;">✓</span> }
+                        </div>
+                    }
                 </div>
                 
                 <!-- Footer -->
@@ -109,6 +103,31 @@ else if (FilteredQuestions.Any())
             </div>
         }
     </div>
+    
+    <!-- Pagination -->
+    @if (TotalPages > 1)
+    {
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 25px; flex-wrap: wrap;">
+            <button @onclick="() => GoToPage(_page - 1)" disabled="@(_page <= 1)" 
+                    style="padding: 8px 14px; border-radius: 6px; border: 1px solid #2a3f5f; background: @(_page <= 1 ? "#1a1a2e" : "#16213e"); color: @(_page <= 1 ? "#4b5563" : "#9ca3af"); cursor: @(_page <= 1 ? "default" : "pointer"); font-size: 13px;">
+                ← Prev
+            </button>
+            
+            @for (int p = StartPage; p <= EndPage; p++)
+            {
+                var pageNum = p;
+                <button @onclick="() => GoToPage(pageNum)" 
+                        style="padding: 8px 14px; border-radius: 6px; border: 1px solid @(pageNum == _page ? "#7c3aed" : "#2a3f5f"); background: @(pageNum == _page ? "#7c3aed" : "#16213e"); color: white; cursor: pointer; font-size: 13px; font-weight: @(pageNum == _page ? "600" : "400");">
+                    @pageNum
+                </button>
+            }
+            
+            <button @onclick="() => GoToPage(_page + 1)" disabled="@(_page >= TotalPages)" 
+                    style="padding: 8px 14px; border-radius: 6px; border: 1px solid #2a3f5f; background: @(_page >= TotalPages ? "#1a1a2e" : "#16213e"); color: @(_page >= TotalPages ? "#4b5563" : "#9ca3af"); cursor: @(_page >= TotalPages ? "default" : "pointer"); font-size: 13px;">
+                Next →
+            </button>
+        </div>
+    }
 }
 else
 {
@@ -157,10 +176,10 @@ else
                 <div>
                     <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Correct Answer</label>
                     <select @bind="_editingQuestion.CorrectAnswer" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;">
-                        <option value="@CorrectOption.A">Option A</option>
-                        <option value="@CorrectOption.B">Option B</option>
-                        <option value="@CorrectOption.C">Option C</option>
-                        <option value="@CorrectOption.D">Option D</option>
+                        <option value="@CorrectOption.A">A</option>
+                        <option value="@CorrectOption.B">B</option>
+                        <option value="@CorrectOption.C">C</option>
+                        <option value="@CorrectOption.D">D</option>
                     </select>
                 </div>
                 <div>
@@ -184,7 +203,7 @@ else
             </div>
             
             <div style="margin-bottom: 15px;">
-                <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Hint/Explanation (for Phone a Friend lifeline)</label>
+                <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Hint/Explanation</label>
                 <textarea @bind="_editingQuestion.Explanation" rows="2" style="width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px; resize: none;" placeholder="Optional hint"></textarea>
             </div>
             
@@ -210,11 +229,22 @@ else
     private string _searchString = "";
     private string _selectedCategoryId = "";
     private int? _selectedLevel;
+    private int _page = 1;
+    private int _pageSize = 15;
 
-    private IEnumerable<Question> FilteredQuestions => _questions.Where(q =>
+    private IEnumerable<Question> FilteredQuestionsList => _questions.Where(q =>
         (string.IsNullOrEmpty(_searchString) || q.QuestionText.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) &&
         (string.IsNullOrEmpty(_selectedCategoryId) || q.CategoryId.ToString() == _selectedCategoryId) &&
         (!_selectedLevel.HasValue || q.Level == _selectedLevel.Value));
+
+    private int FilteredCount => FilteredQuestionsList.Count();
+    private int TotalPages => (int)Math.Ceiling((double)FilteredCount / _pageSize);
+    private int StartPage => Math.Max(1, _page - 2);
+    private int EndPage => Math.Min(TotalPages, StartPage + 4);
+
+    private IEnumerable<Question> PagedQuestions => FilteredQuestionsList
+        .Skip((_page - 1) * _pageSize)
+        .Take(_pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -237,6 +267,12 @@ else
     private void FilterByLevel(int? level)
     {
         _selectedLevel = level;
+        _page = 1; // Reset to first page on filter change
+    }
+
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= TotalPages) _page = page;
     }
 
     private void OpenAddDialog()
@@ -293,9 +329,9 @@ else
 
     private string GetLevelColor(int level) => level switch
     {
-        <= 5 => "#10b981",   // Green - Easy
-        <= 10 => "#f59e0b",  // Orange - Medium
-        <= 13 => "#ef4444",  // Red - Hard
-        _ => "#8b5cf6"       // Purple - Expert
+        <= 5 => "#10b981",
+        <= 10 => "#f59e0b",
+        <= 13 => "#ef4444",
+        _ => "#8b5cf6"
     };
 }

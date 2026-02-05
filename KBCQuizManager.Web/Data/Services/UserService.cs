@@ -14,6 +14,16 @@ public interface IUserService
     Task<(bool Success, string Message)> ToggleUserStatusAsync(Guid id);
     Task<(bool Success, string Message)> ResetPasswordAsync(Guid userId, string newPassword);
     Task<UserStatistics> GetUserStatisticsAsync(Guid userId);
+    
+    // Admin code
+    Task<ApplicationUser?> ValidateAdminCodeAsync(string code);
+    Task<string?> GetAdminCodeAsync(Guid adminId);
+    Task<(bool Success, string Message)> RegenerateAdminCodeAsync(Guid adminId);
+    
+    // Public users
+    Task<PublicUser> RegisterOrGetPublicUserAsync(string name, string? email, Guid adminId);
+    Task<(List<PublicUser> Users, int TotalCount)> GetPublicUsersByAdminAsync(Guid adminId, int page, int pageSize, string? search = null);
+    Task<(bool Success, string Message)> DeletePublicUserAsync(Guid publicUserId, Guid adminId);
 }
 
 public class UserService : IUserService
@@ -51,16 +61,29 @@ public class UserService : IUserService
         if (existingUser != null)
             return (false, "A user with this email already exists");
         
+        // Generate unique admin code
+        var existingCodes = await _context.Users
+            .Where(u => u.AdminCode != null)
+            .Select(u => u.AdminCode!)
+            .ToListAsync();
+        
+        string code;
+        do
+        {
+            code = ApplicationUser.GenerateAdminCode();
+        } while (existingCodes.Contains(code));
+        
         user.UserName = user.Email;
         user.Role = UserRole.Admin;
         user.CreatedById = createdById;
         user.CreatedAt = DateTime.UtcNow;
         user.EmailConfirmed = true;
+        user.AdminCode = code;
         
         var result = await _userManager.CreateAsync(user, password);
         
         if (result.Succeeded)
-            return (true, "Admin created successfully");
+            return (true, $"Admin created successfully. Admin Code: {code}");
             
         var errors = string.Join(", ", result.Errors.Select(e => e.Description));
         return (false, errors);
@@ -133,13 +156,117 @@ public class UserService : IUserService
         var categoriesCount = await _context.Categories.CountAsync(c => c.OwnerId == userId);
         var questionsCount = await _context.Questions.CountAsync(q => q.OwnerId == userId);
         var activeQuestionsCount = await _context.Questions.CountAsync(q => q.OwnerId == userId && q.IsActive);
+        var publicUsersCount = await _context.PublicUsers.CountAsync(p => p.AdminId == userId);
         
         return new UserStatistics
         {
             TotalCategories = categoriesCount,
             TotalQuestions = questionsCount,
-            ActiveQuestions = activeQuestionsCount
+            ActiveQuestions = activeQuestionsCount,
+            RegisteredUsers = publicUsersCount
         };
+    }
+    
+    // ===== Admin Code Methods =====
+    
+    public async Task<ApplicationUser?> ValidateAdminCodeAsync(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return null;
+        
+        return await _context.Users
+            .FirstOrDefaultAsync(u => u.AdminCode == code.Trim().ToUpper() && u.IsActive);
+    }
+    
+    public async Task<string?> GetAdminCodeAsync(Guid adminId)
+    {
+        return await _context.Users
+            .Where(u => u.Id == adminId)
+            .Select(u => u.AdminCode)
+            .FirstOrDefaultAsync();
+    }
+    
+    public async Task<(bool Success, string Message)> RegenerateAdminCodeAsync(Guid adminId)
+    {
+        var user = await _context.Users.FindAsync(adminId);
+        if (user == null)
+            return (false, "User not found");
+        
+        var existingCodes = await _context.Users
+            .Where(u => u.AdminCode != null && u.Id != adminId)
+            .Select(u => u.AdminCode!)
+            .ToListAsync();
+        
+        string code;
+        do
+        {
+            code = ApplicationUser.GenerateAdminCode();
+        } while (existingCodes.Contains(code));
+        
+        user.AdminCode = code;
+        await _context.SaveChangesAsync();
+        
+        return (true, $"New code generated: {code}");
+    }
+    
+    // ===== Public User Methods =====
+    
+    public async Task<PublicUser> RegisterOrGetPublicUserAsync(string name, string? email, Guid adminId)
+    {
+        // Check if user already exists with same name for this admin
+        var existing = await _context.PublicUsers
+            .FirstOrDefaultAsync(p => p.AdminId == adminId && p.Name.ToLower() == name.Trim().ToLower());
+        
+        if (existing != null)
+            return existing;
+        
+        var publicUser = new PublicUser
+        {
+            Id = Guid.NewGuid(),
+            Name = name.Trim(),
+            Email = email?.Trim(),
+            AdminId = adminId,
+            RegisteredAt = DateTime.UtcNow
+        };
+        
+        _context.PublicUsers.Add(publicUser);
+        await _context.SaveChangesAsync();
+        
+        return publicUser;
+    }
+    
+    public async Task<(List<PublicUser> Users, int TotalCount)> GetPublicUsersByAdminAsync(Guid adminId, int page, int pageSize, string? search = null)
+    {
+        var query = _context.PublicUsers
+            .Where(p => p.AdminId == adminId);
+        
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(s) || (p.Email != null && p.Email.ToLower().Contains(s)));
+        }
+        
+        var totalCount = await query.CountAsync();
+        
+        var users = await query
+            .OrderByDescending(p => p.RegisteredAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        
+        return (users, totalCount);
+    }
+    
+    public async Task<(bool Success, string Message)> DeletePublicUserAsync(Guid publicUserId, Guid adminId)
+    {
+        var user = await _context.PublicUsers
+            .FirstOrDefaultAsync(p => p.Id == publicUserId && p.AdminId == adminId);
+        
+        if (user == null)
+            return (false, "User not found");
+        
+        _context.PublicUsers.Remove(user);
+        await _context.SaveChangesAsync();
+        return (true, "User removed successfully");
     }
 }
 
@@ -148,4 +275,5 @@ public class UserStatistics
     public int TotalCategories { get; set; }
     public int TotalQuestions { get; set; }
     public int ActiveQuestions { get; set; }
+    public int RegisteredUsers { get; set; }
 }

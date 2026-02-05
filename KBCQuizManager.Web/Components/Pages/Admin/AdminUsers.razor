@@ -1,0 +1,201 @@
+@page "/admin/users"
+@inject IAuthService AuthService
+@inject IUserService UserService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Registered Users - InternsPlay</PageTitle>
+
+<!-- Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px;">
+    <div>
+        <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Registered Users</h1>
+        <p style="color: #9ca3af; margin: 0;">Users who joined using your admin code</p>
+    </div>
+    @if (!string.IsNullOrEmpty(_adminCode))
+    {
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="background: #16213e; border: 1px solid #7c3aed; border-radius: 8px; padding: 8px 16px;">
+                <span style="color: #9ca3af; font-size: 12px;">Your Code: </span>
+                <span style="color: #a855f7; font-size: 18px; font-weight: 700; letter-spacing: 3px; font-family: monospace;">@_adminCode</span>
+            </div>
+            <button @onclick="CopyCode" style="background: #7c3aed; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;">📋 Copy</button>
+        </div>
+    }
+</div>
+
+<!-- Search -->
+<div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+        <input @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" placeholder="Search by name or email..." style="flex: 1; min-width: 200px; padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
+        <button @onclick="SearchUsers" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer;">🔍 Search</button>
+        <span style="color: #9ca3af; font-size: 14px;">Total: @_totalCount users</span>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
+}
+else if (_users.Any())
+{
+    <!-- Users Table -->
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #1a1a2e;">
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; font-weight: 600; border-bottom: 1px solid #2a3f5f;">#</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; font-weight: 600; border-bottom: 1px solid #2a3f5f;">Name</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; font-weight: 600; border-bottom: 1px solid #2a3f5f;" class="hide-mobile">Email</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; font-weight: 600; border-bottom: 1px solid #2a3f5f;" class="hide-mobile">Games</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; font-weight: 600; border-bottom: 1px solid #2a3f5f;" class="hide-mobile">Score</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; font-weight: 600; border-bottom: 1px solid #2a3f5f;">Registered</th>
+                    <th style="padding: 14px 20px; text-align: center; color: #9ca3af; font-size: 13px; font-weight: 600; border-bottom: 1px solid #2a3f5f;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ var idx = (_page - 1) * _pageSize; }
+                @foreach (var user in _users)
+                {
+                    idx++;
+                    <tr style="border-bottom: 1px solid #2a3f5f;">
+                        <td style="padding: 12px 20px; color: #6b7280; font-size: 14px;">@idx</td>
+                        <td style="padding: 12px 20px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 32px; height: 32px; background: #7c3aed; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
+                                    @(user.Name.Length > 0 ? user.Name[0] : '?')
+                                </div>
+                                <span style="color: white; font-size: 14px;">@user.Name</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px 20px; color: #9ca3af; font-size: 14px;" class="hide-mobile">@(user.Email ?? "—")</td>
+                        <td style="padding: 12px 20px; color: #9ca3af; font-size: 14px;" class="hide-mobile">@user.GamesPlayed</td>
+                        <td style="padding: 12px 20px; color: #fbbf24; font-size: 14px;" class="hide-mobile">@user.TotalScore</td>
+                        <td style="padding: 12px 20px; color: #9ca3af; font-size: 13px;">@user.RegisteredAt.ToString("MMM dd, yyyy")</td>
+                        <td style="padding: 12px 20px; text-align: center;">
+                            <button @onclick="() => DeleteUser(user)" style="background: transparent; border: 1px solid #2a3f5f; color: #ef4444; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    @if (_totalPages > 1)
+    {
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button @onclick="() => GoToPage(_page - 1)" disabled="@(_page <= 1)" 
+                    style="padding: 8px 14px; border-radius: 6px; border: 1px solid #2a3f5f; background: @(_page <= 1 ? "#1a1a2e" : "#16213e"); color: @(_page <= 1 ? "#4b5563" : "#9ca3af"); cursor: @(_page <= 1 ? "default" : "pointer"); font-size: 13px;">
+                ← Prev
+            </button>
+            
+            @for (int p = _startPage; p <= _endPage; p++)
+            {
+                var pageNum = p;
+                <button @onclick="() => GoToPage(pageNum)" 
+                        style="padding: 8px 14px; border-radius: 6px; border: 1px solid @(pageNum == _page ? "#7c3aed" : "#2a3f5f"); background: @(pageNum == _page ? "#7c3aed" : "#16213e"); color: white; cursor: pointer; font-size: 13px; font-weight: @(pageNum == _page ? "600" : "400");">
+                    @pageNum
+                </button>
+            }
+            
+            <button @onclick="() => GoToPage(_page + 1)" disabled="@(_page >= _totalPages)" 
+                    style="padding: 8px 14px; border-radius: 6px; border: 1px solid #2a3f5f; background: @(_page >= _totalPages ? "#1a1a2e" : "#16213e"); color: @(_page >= _totalPages ? "#4b5563" : "#9ca3af"); cursor: @(_page >= _totalPages ? "default" : "pointer"); font-size: 13px;">
+                Next →
+            </button>
+        </div>
+    }
+}
+else
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 15px;">👤</div>
+        <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No registered users yet</h3>
+        <p style="color: #6b7280; margin: 0 0 20px 0;">Share your admin code with users so they can play games</p>
+        @if (!string.IsNullOrEmpty(_adminCode))
+        {
+            <div style="margin-top: 20px;">
+                <p style="color: #9ca3af; margin: 0 0 10px 0;">Your admin code:</p>
+                <div style="display: inline-block; background: #1a1a2e; border: 2px solid #7c3aed; border-radius: 10px; padding: 15px 30px;">
+                    <span style="color: #a855f7; font-size: 28px; font-weight: 700; letter-spacing: 5px; font-family: monospace;">@_adminCode</span>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private ApplicationUser? _currentUser;
+    private List<PublicUser> _users = new();
+    private bool _isLoading = true;
+    private string _search = "";
+    private string? _adminCode;
+    private int _page = 1;
+    private int _pageSize = 20;
+    private int _totalCount = 0;
+    private int _totalPages => (int)Math.Ceiling((double)_totalCount / _pageSize);
+    private int _startPage => Math.Max(1, _page - 2);
+    private int _endPage => Math.Min(_totalPages, _startPage + 4);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        if (_currentUser != null)
+        {
+            _adminCode = _currentUser.AdminCode;
+            await LoadUsers();
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        _isLoading = true;
+        if (_currentUser != null)
+        {
+            var result = await UserService.GetPublicUsersByAdminAsync(_currentUser.Id, _page, _pageSize, string.IsNullOrWhiteSpace(_search) ? null : _search);
+            _users = result.Users;
+            _totalCount = result.TotalCount;
+        }
+        _isLoading = false;
+    }
+
+    private async Task SearchUsers()
+    {
+        _page = 1;
+        await LoadUsers();
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SearchUsers();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1 || page > _totalPages) return;
+        _page = page;
+        await LoadUsers();
+    }
+
+    private async Task CopyCode()
+    {
+        if (!string.IsNullOrEmpty(_adminCode))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _adminCode);
+            Snackbar.Add("Admin code copied!", Severity.Info);
+        }
+    }
+
+    private async Task DeleteUser(PublicUser user)
+    {
+        var confirm = await DialogService.ShowMessageBox("Remove User", $"Remove '{user.Name}' from your users?", yesText: "Remove", cancelText: "Cancel");
+        if (confirm == true)
+        {
+            var (success, message) = await UserService.DeletePublicUserAsync(user.Id, _currentUser!.Id);
+            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (success) await LoadUsers();
+        }
+    }
+}
