@@ -5,7 +5,7 @@ namespace KBCQuizManager.Web.Data.Services;
 
 public interface IGameService
 {
-    Task<GameSession> StartNewGameAsync(string playerName, Guid ownerId);
+    Task<GameSession> StartNewGameAsync(string playerName, Guid ownerId, Guid? playerId = null);
     Task<Question?> GetQuestionForLevelAsync(int level, Guid ownerId, List<Guid> usedQuestionIds);
     Task<GameSession?> GetGameSessionAsync(Guid sessionId);
     Task<List<GameSession>> GetGameHistoryAsync(Guid ownerId, int count = 20);
@@ -18,6 +18,9 @@ public interface IGameService
     Task<string> GetPhoneAFriendHintAsync(Question question);
     Task<(CorrectOption suggestedAnswer, int confidence)> GetExpertAdviceAsync(Question question);
     Task<GameStatistics> GetGameStatisticsAsync(Guid ownerId);
+    Task<List<GameSession>> GetPlayerGameHistoryAsync(Guid playerId, int count = 20);
+    Task<GameStatistics> GetPlayerGameStatisticsAsync(Guid playerId);
+    Task<List<LeaderboardEntry>> GetLeaderboardAsync(Guid adminId, int count = 20);
 }
 
 public class GameService : IGameService
@@ -30,7 +33,7 @@ public class GameService : IGameService
         _context = context;
     }
 
-    public async Task<GameSession> StartNewGameAsync(string playerName, Guid ownerId)
+    public async Task<GameSession> StartNewGameAsync(string playerName, Guid ownerId, Guid? playerId = null)
     {
         // Clear any existing tracked entities
         _context.ChangeTracker.Clear();
@@ -39,6 +42,7 @@ public class GameService : IGameService
         {
             PlayerName = playerName,
             OwnerId = ownerId,
+            PlayerId = playerId,
             Status = GameStatus.InProgress,
             CurrentLevel = 1
         };
@@ -329,6 +333,91 @@ public class GameService : IGameService
         
         return result;
     }
+
+    public async Task<List<GameSession>> GetPlayerGameHistoryAsync(Guid playerId, int count = 20)
+    {
+        return await _context.GameSessions
+            .Where(g => g.PlayerId == playerId)
+            .OrderByDescending(g => g.StartedAt)
+            .Take(count)
+            .Include(g => g.Answers)
+            .ToListAsync();
+    }
+
+    public async Task<GameStatistics> GetPlayerGameStatisticsAsync(Guid playerId)
+    {
+        var sessions = await _context.GameSessions
+            .Where(g => g.PlayerId == playerId)
+            .ToListAsync();
+
+        return new GameStatistics
+        {
+            TotalGames = sessions.Count,
+            GamesWon = sessions.Count(s => s.Status == GameStatus.Won),
+            GamesLost = sessions.Count(s => s.Status == GameStatus.Lost),
+            GamesQuit = sessions.Count(s => s.Status == GameStatus.Quit),
+            GamesTimedOut = sessions.Count(s => s.Status == GameStatus.TimedOut),
+            TotalPrizeWon = sessions.Sum(s => s.FinalPrize),
+            HighestPrize = sessions.Any() ? sessions.Max(s => s.FinalPrize) : 0,
+            AverageLevel = sessions.Any() ? (int)sessions.Average(s => s.CurrentLevel) : 0,
+            TotalQuestionsAnswered = sessions.Sum(s => s.QuestionsAnswered),
+            TotalCorrectAnswers = sessions.Sum(s => s.CorrectAnswers)
+        };
+    }
+
+    public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(Guid adminId, int count = 20)
+    {
+        // Get all game sessions for this admin's question bank, grouped by player
+        var sessions = await _context.GameSessions
+            .Where(g => g.OwnerId == adminId && g.PlayerId != null)
+            .Include(g => g.Player)
+            .ToListAsync();
+        
+        var leaderboard = sessions
+            .Where(g => g.Player != null)
+            .GroupBy(g => g.PlayerId!.Value)
+            .Select(group => new LeaderboardEntry
+            {
+                PlayerId = group.Key,
+                PlayerName = group.First().Player!.FullName,
+                TotalGames = group.Count(),
+                GamesWon = group.Count(g => g.Status == GameStatus.Won),
+                HighestPrize = group.Max(g => g.FinalPrize),
+                TotalPrize = group.Sum(g => g.FinalPrize),
+                BestLevel = group.Max(g => g.CurrentLevel),
+                TotalCorrectAnswers = group.Sum(g => g.CorrectAnswers)
+            })
+            .OrderByDescending(l => l.HighestPrize)
+            .ThenByDescending(l => l.TotalPrize)
+            .Take(count)
+            .ToList();
+        
+        // Also include public user games (anonymous)
+        var publicSessions = await _context.GameSessions
+            .Where(g => g.OwnerId == adminId && g.PlayerId == null && g.PlayerName != null)
+            .ToListAsync();
+        
+        var publicLeaderboard = publicSessions
+            .GroupBy(g => g.PlayerName)
+            .Select(group => new LeaderboardEntry
+            {
+                PlayerId = Guid.Empty,
+                PlayerName = group.Key,
+                TotalGames = group.Count(),
+                GamesWon = group.Count(g => g.Status == GameStatus.Won),
+                HighestPrize = group.Max(g => g.FinalPrize),
+                TotalPrize = group.Sum(g => g.FinalPrize),
+                BestLevel = group.Max(g => g.CurrentLevel),
+                TotalCorrectAnswers = group.Sum(g => g.CorrectAnswers)
+            });
+        
+        return leaderboard
+            .Concat(publicLeaderboard)
+            .OrderByDescending(l => l.HighestPrize)
+            .ThenByDescending(l => l.TotalPrize)
+            .Take(count)
+            .ToList();
+    }
 }
 
 public class LifelineUsage
@@ -360,4 +449,16 @@ public class GameStatistics
     public int TotalQuestionsAnswered { get; set; }
     public int TotalCorrectAnswers { get; set; }
     public double AccuracyPercent => TotalQuestionsAnswered > 0 ? (double)TotalCorrectAnswers / TotalQuestionsAnswered * 100 : 0;
+}
+
+public class LeaderboardEntry
+{
+    public Guid PlayerId { get; set; }
+    public string PlayerName { get; set; } = string.Empty;
+    public int TotalGames { get; set; }
+    public int GamesWon { get; set; }
+    public long HighestPrize { get; set; }
+    public long TotalPrize { get; set; }
+    public int BestLevel { get; set; }
+    public int TotalCorrectAnswers { get; set; }
 }

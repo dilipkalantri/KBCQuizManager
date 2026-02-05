@@ -24,6 +24,10 @@ public interface IUserService
     Task<PublicUser> RegisterOrGetPublicUserAsync(string name, string? email, Guid adminId);
     Task<(List<PublicUser> Users, int TotalCount)> GetPublicUsersByAdminAsync(Guid adminId, int page, int pageSize, string? search = null);
     Task<(bool Success, string Message)> DeletePublicUserAsync(Guid publicUserId, Guid adminId);
+    
+    // Player users (registered with email)
+    Task<(List<ApplicationUser> Players, int TotalCount)> GetPlayersByAdminAsync(Guid adminId, int page, int pageSize, string? search = null);
+    Task<(bool Success, string Message)> TogglePlayerStatusAsync(Guid playerId, Guid adminId);
 }
 
 public class UserService : IUserService
@@ -267,6 +271,47 @@ public class UserService : IUserService
         _context.PublicUsers.Remove(user);
         await _context.SaveChangesAsync();
         return (true, "User removed successfully");
+    }
+    
+    // ===== Player (Registered) User Methods =====
+    
+    public async Task<(List<ApplicationUser> Players, int TotalCount)> GetPlayersByAdminAsync(Guid adminId, int page, int pageSize, string? search = null)
+    {
+        var query = _context.Users
+            .Where(u => u.Role == UserRole.Player && u.LinkedAdminId == adminId);
+        
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.ToLower();
+            query = query.Where(u => u.FirstName.ToLower().Contains(s) 
+                || u.LastName.ToLower().Contains(s) 
+                || (u.Email != null && u.Email.ToLower().Contains(s)));
+        }
+        
+        var totalCount = await query.CountAsync();
+        
+        var players = await query
+            .OrderByDescending(u => u.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        
+        return (players, totalCount);
+    }
+    
+    public async Task<(bool Success, string Message)> TogglePlayerStatusAsync(Guid playerId, Guid adminId)
+    {
+        var player = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == playerId && u.Role == UserRole.Player && u.LinkedAdminId == adminId);
+        
+        if (player == null)
+            return (false, "Player not found");
+        
+        player.IsActive = !player.IsActive;
+        await _context.SaveChangesAsync();
+        
+        var status = player.IsActive ? "activated" : "deactivated";
+        return (true, $"Player {status} successfully");
     }
 }
 

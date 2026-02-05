@@ -1,0 +1,90 @@
+@page "/player/history"
+@inject IAuthService AuthService
+@inject IGameService GameService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Game History - InternsPlay</PageTitle>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <div>
+        <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Game History</h1>
+        <p style="color: #9ca3af; margin: 0;">Your past game sessions</p>
+    </div>
+    <a href="/player/play" style="background: #7c3aed; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px;">🎮 Play New Game</a>
+</div>
+
+@if (_isLoading)
+{
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
+}
+else if (_games.Any())
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #1a1a2e;">
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Date</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Status</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Level</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Correct</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Prize Won</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var game in _games)
+                {
+                    <tr style="border-bottom: 1px solid #2a3f5f;">
+                        <td style="padding: 12px 20px; color: #9ca3af; font-size: 14px;">@game.StartedAt.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</td>
+                        <td style="padding: 12px 20px;">
+                            <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; @GetStatusStyle(game.Status)">
+                                @game.Status
+                            </span>
+                        </td>
+                        <td style="padding: 12px 20px; color: white; font-size: 14px;">@game.CurrentLevel / 15</td>
+                        <td style="padding: 12px 20px; color: #10b981; font-size: 14px;">@game.CorrectAnswers / @game.QuestionsAnswered</td>
+                        <td style="padding: 12px 20px; color: #fbbf24; font-size: 14px; font-weight: 600;">@KBCPrizeStructure.FormatPrize(game.FinalPrize)</td>
+                        <td style="padding: 12px 20px; color: #9ca3af; font-size: 14px;">@game.GetDuration()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 15px;">🎮</div>
+        <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No games played yet</h3>
+        <p style="color: #6b7280; margin: 0 0 20px 0;">Start your first game to see your history here</p>
+        <a href="/player/play" style="background: #7c3aed; color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-size: 16px;">🎮 Play Now</a>
+    </div>
+}
+
+@code {
+    private ApplicationUser? _currentUser;
+    private List<GameSession> _games = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        if (_currentUser == null || _currentUser.Role != UserRole.Player)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+        
+        _games = await GameService.GetPlayerGameHistoryAsync(_currentUser.Id);
+        _isLoading = false;
+    }
+
+    private string GetStatusStyle(GameStatus status) => status switch
+    {
+        GameStatus.Won => "background: rgba(16, 185, 129, 0.2); color: #10b981;",
+        GameStatus.Lost => "background: rgba(239, 68, 68, 0.2); color: #ef4444;",
+        GameStatus.Quit => "background: rgba(245, 158, 11, 0.2); color: #f59e0b;",
+        GameStatus.TimedOut => "background: rgba(239, 68, 68, 0.2); color: #ef4444;",
+        _ => "background: rgba(59, 130, 246, 0.2); color: #3b82f6;"
+    };
+}

@@ -1,0 +1,104 @@
+@page "/verify-email"
+@layout EmptyLayout
+@inject NavigationManager NavigationManager
+
+<MudThemeProvider IsDarkMode="true" />
+
+<style>
+    .verify-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); padding: 20px; font-family: 'Roboto', Arial, sans-serif; }
+    .verify-card { background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(129, 140, 248, 0.2); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); width: 100%; max-width: 460px; padding: 40px; border-radius: 16px; text-align: center; }
+    .verify-icon { font-size: 64px; margin-bottom: 20px; }
+    .verify-title { color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; }
+    .verify-msg { color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px; }
+    .verify-success { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    .verify-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    .verify-pending { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    .verify-btn { display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #7c3aed, #a855f7); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s; }
+    .verify-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3); }
+    .verify-link { color: #818cf8; text-decoration: none; font-size: 0.875rem; }
+    .verify-link:hover { text-decoration: underline; }
+    .verify-token-box { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px; padding: 12px; margin: 15px 0; word-break: break-all; }
+    .verify-token-label { color: #6b7280; font-size: 12px; margin-bottom: 5px; }
+    .verify-token-value { color: #a855f7; font-family: monospace; font-size: 14px; font-weight: 600; }
+</style>
+
+<div class="verify-page">
+    <div class="verify-card">
+        @if (_isSuccess)
+        {
+            <!-- Email Verified Successfully -->
+            <div class="verify-icon">✅</div>
+            <h1 class="verify-title">Email Verified!</h1>
+            <div class="verify-success">
+                <p style="color: #10b981; margin: 0; font-size: 15px;">Your email has been verified successfully.</p>
+                <p style="color: #6ee7b7; margin: 10px 0 0 0; font-size: 13px;">You can now sign in to your account.</p>
+            </div>
+            <a href="/login" class="verify-btn">Sign In Now</a>
+        }
+        else if (!string.IsNullOrEmpty(_error))
+        {
+            <!-- Verification Error -->
+            <div class="verify-icon">⚠️</div>
+            <h1 class="verify-title">Verification Failed</h1>
+            <div class="verify-error">
+                <p style="color: #f87171; margin: 0;">@_error</p>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <a href="/login" class="verify-btn" style="background: transparent; border: 1px solid #2a3f5f; font-size: 0.9rem;">Back to Login</a>
+                <a href="/register" class="verify-btn" style="font-size: 0.9rem;">Register Again</a>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(_email) && !string.IsNullOrEmpty(_token))
+        {
+            <!-- Pending Verification - Show Link (dev mode) -->
+            <div class="verify-icon">📧</div>
+            <h1 class="verify-title">Verify Your Email</h1>
+            <div class="verify-pending">
+                <p style="color: #60a5fa; margin: 0; font-size: 15px;">A verification link has been generated for <strong>@_email</strong></p>
+            </div>
+            
+            <p class="verify-msg">
+                In production, this link would be sent to your email. For now, click the button below to verify your account.
+            </p>
+
+            <a href="/account/verify-email?email=@Uri.EscapeDataString(_email)&token=@Uri.EscapeDataString(_token)" class="verify-btn">
+                ✉️ Verify My Email
+            </a>
+            
+            <div class="verify-token-box">
+                <div class="verify-token-label">Verification Token (for reference):</div>
+                <div class="verify-token-value">@_token</div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <a href="/login" class="verify-link">← Back to Login</a>
+            </div>
+        }
+        else
+        {
+            <!-- Generic Pending -->
+            <div class="verify-icon">📧</div>
+            <h1 class="verify-title">Check Your Email</h1>
+            <p class="verify-msg">We've sent a verification link to your email address. Please click the link to verify your account.</p>
+            <a href="/login" class="verify-btn">Go to Login</a>
+        }
+    </div>
+</div>
+
+@code {
+    private string? _error;
+    private string? _email;
+    private string? _token;
+    private bool _isSuccess;
+
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        
+        if (query.TryGetValue("error", out var error)) _error = error;
+        if (query.TryGetValue("email", out var email)) _email = email;
+        if (query.TryGetValue("token", out var token)) _token = token;
+        if (query.TryGetValue("success", out var success)) _isSuccess = success == "true";
+    }
+}

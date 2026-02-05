@@ -39,8 +39,8 @@ else
             
             <div style="margin: 15px; padding: 12px; background: #1a1a2e; border-radius: 8px; border: 1px solid #2a3f5f;">
                 <div style="color: white; font-weight: 600; font-size: 14px;">@_currentUser.FullName</div>
-                <div style="color: #7c3aed; font-size: 12px; margin-top: 2px;">@(_currentUser.Role == UserRole.SuperAdmin ? "Super Admin" : "Admin")</div>
-                @if (!string.IsNullOrEmpty(_currentUser.AdminCode))
+                <div style="color: #7c3aed; font-size: 12px; margin-top: 2px;">@(_currentUser.Role == UserRole.SuperAdmin ? "Super Admin" : _currentUser.Role == UserRole.Player ? "Player" : "Admin")</div>
+                @if (!string.IsNullOrEmpty(_currentUser.AdminCode) && _currentUser.Role != UserRole.Player)
                 {
                     <div style="margin-top: 8px; padding: 6px 10px; background: rgba(124, 58, 237, 0.15); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
                         <div>
@@ -53,32 +53,51 @@ else
             </div>
             
             <div style="padding: 0 10px;">
-                <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Menu</div>
-                <a href="/" class="nav-link @(IsActive("/") ? "active" : "")" @onclick="CloseDrawer">📊 Dashboard</a>
-                
-                @if (_currentUser.Role == UserRole.SuperAdmin)
+                @if (_currentUser.Role == UserRole.Player)
                 {
-                    <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Admin</div>
-                    <a href="/superadmin/admins" class="nav-link @(IsActive("/superadmin") ? "active" : "")" @onclick="CloseDrawer">👥 Manage Admins</a>
+                    <!-- Player Navigation -->
+                    <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Menu</div>
+                    <a href="/player" class="nav-link @(IsActive("/player") && !IsActive("/player/play") && !IsActive("/player/history") && !IsActive("/player/leaderboard") ? "active" : "")" @onclick="CloseDrawer">📊 Dashboard</a>
+                    
+                    <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Game</div>
+                    <a href="/player/play" class="nav-link @(IsActive("/player/play") ? "active" : "")" @onclick="CloseDrawer">🎮 Play Game</a>
+                    <a href="/player/history" class="nav-link @(IsActive("/player/history") ? "active" : "")" @onclick="CloseDrawer">📊 Game History</a>
+                    <a href="/player/leaderboard" class="nav-link @(IsActive("/player/leaderboard") ? "active" : "")" @onclick="CloseDrawer">🏆 Leaderboard</a>
+                    
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #2a3f5f;">
+                        <a href="/account/logout" class="nav-link" style="color: #ef4444;">🚪 Logout</a>
+                    </div>
                 }
-                
-                <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Questions</div>
-                <a href="/admin/categories" class="nav-link @(IsActive("/admin/categories") ? "active" : "")" @onclick="CloseDrawer">📁 Categories</a>
-                <a href="/admin/questions" class="nav-link @(IsActive("/admin/questions") ? "active" : "")" @onclick="CloseDrawer">❓ All Questions</a>
-                <a href="/admin/import" class="nav-link @(IsActive("/admin/import") ? "active" : "")" @onclick="CloseDrawer">📤 Import JSON</a>
-                
-                <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Users</div>
-                <a href="/admin/users" class="nav-link @(IsActive("/admin/users") ? "active" : "")" @onclick="CloseDrawer">👤 Registered Users</a>
-                
-                <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Game</div>
-                <a href="/admin/play" class="nav-link @(IsActive("/admin/play") ? "active" : "")" @onclick="CloseDrawer">🎮 Play Game</a>
-                <a href="/admin/multiplayer" class="nav-link @(IsActive("/admin/multiplayer") ? "active" : "")" @onclick="CloseDrawer">👥 Multiplayer</a>
-                <a href="/admin/game-history" class="nav-link @(IsActive("/admin/game-history") ? "active" : "")" @onclick="CloseDrawer">📊 Game History</a>
-                
-                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #2a3f5f;">
-                    <a href="/home" class="nav-link" style="color: #10b981;" @onclick="CloseDrawer">🌐 Public Home</a>
-                    <a href="/account/logout" class="nav-link" style="color: #ef4444;">🚪 Logout</a>
-                </div>
+                else
+                {
+                    <!-- Admin Navigation -->
+                    <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Menu</div>
+                    <a href="/" class="nav-link @(IsActive("/") ? "active" : "")" @onclick="CloseDrawer">📊 Dashboard</a>
+                    
+                    @if (_currentUser.Role == UserRole.SuperAdmin)
+                    {
+                        <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Admin</div>
+                        <a href="/superadmin/admins" class="nav-link @(IsActive("/superadmin") ? "active" : "")" @onclick="CloseDrawer">👥 Manage Admins</a>
+                    }
+                    
+                    <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Questions</div>
+                    <a href="/admin/categories" class="nav-link @(IsActive("/admin/categories") ? "active" : "")" @onclick="CloseDrawer">📁 Categories</a>
+                    <a href="/admin/questions" class="nav-link @(IsActive("/admin/questions") ? "active" : "")" @onclick="CloseDrawer">❓ All Questions</a>
+                    <a href="/admin/import" class="nav-link @(IsActive("/admin/import") ? "active" : "")" @onclick="CloseDrawer">📤 Import JSON</a>
+                    
+                    <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Users</div>
+                    <a href="/admin/users" class="nav-link @(IsActive("/admin/users") ? "active" : "")" @onclick="CloseDrawer">👤 Registered Users</a>
+                    
+                    <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Game</div>
+                    <a href="/admin/play" class="nav-link @(IsActive("/admin/play") ? "active" : "")" @onclick="CloseDrawer">🎮 Play Game</a>
+                    <a href="/admin/multiplayer" class="nav-link @(IsActive("/admin/multiplayer") ? "active" : "")" @onclick="CloseDrawer">👥 Multiplayer</a>
+                    <a href="/admin/game-history" class="nav-link @(IsActive("/admin/game-history") ? "active" : "")" @onclick="CloseDrawer">📊 Game History</a>
+                    
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #2a3f5f;">
+                        <a href="/home" class="nav-link" style="color: #10b981;" @onclick="CloseDrawer">🌐 Public Home</a>
+                        <a href="/account/logout" class="nav-link" style="color: #ef4444;">🚪 Logout</a>
+                    </div>
+                }
             </div>
         </div>
         
@@ -87,8 +106,8 @@ else
             <div class="topbar">
                 <button class="hamburger" @onclick="ToggleDrawer">☰</button>
                 <div style="flex: 1;"></div>
-                <span style="padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; @(_currentUser.Role == UserRole.SuperAdmin ? "background: #f59e0b; color: white;" : "background: #3b82f6; color: white;")" class="hide-mobile">
-                    @(_currentUser.Role == UserRole.SuperAdmin ? "Super Admin" : "Admin")
+                <span style="padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; @(_currentUser.Role == UserRole.SuperAdmin ? "background: #f59e0b; color: white;" : _currentUser.Role == UserRole.Player ? "background: #10b981; color: white;" : "background: #3b82f6; color: white;")" class="hide-mobile">
+                    @(_currentUser.Role == UserRole.SuperAdmin ? "Super Admin" : _currentUser.Role == UserRole.Player ? "Player" : "Admin")
                 </span>
                 <div style="width: 32px; height: 32px; background: #7c3aed; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
                     @(_currentUser.FirstName?.Length > 0 ? _currentUser.FirstName[0] : 'U')

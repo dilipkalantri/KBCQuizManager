@@ -11,6 +11,12 @@ public interface IAuthService
     Task<ApplicationUser?> GetCurrentUserAsync();
     Task<bool> IsAuthenticatedAsync();
     Task<(bool Success, string Message)> ChangePasswordAsync(string currentPassword, string newPassword);
+    
+    // Player registration
+    Task<(bool Success, string Message, string? VerificationToken)> RegisterPlayerAsync(
+        string firstName, string lastName, string email, string password, string adminCode);
+    Task<(bool Success, string Message)> VerifyEmailAsync(string email, string token);
+    Task<(bool Success, string Message)> ResendVerificationAsync(string email);
 }
 
 public class AuthService : IAuthService
@@ -18,15 +24,18 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ApplicationDbContext _context;
     
     public AuthService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ApplicationDbContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _httpContextAccessor = httpContextAccessor;
+        _context = context;
     }
     
     public async Task<(bool Success, string Message)> LoginAsync(string email, string password)
@@ -38,6 +47,9 @@ public class AuthService : IAuthService
             
         if (!user.IsActive)
             return (false, "Your account has been deactivated. Please contact the administrator.");
+        
+        if (!user.EmailConfirmed)
+            return (false, "Please verify your email before logging in. Check your inbox for the verification link.");
         
         var result = await _signInManager.PasswordSignInAsync(user, password, isPersistent: true, lockoutOnFailure: false);
         
@@ -88,5 +100,101 @@ public class AuthService : IAuthService
             
         var errors = string.Join(", ", result.Errors.Select(e => e.Description));
         return (false, errors);
+    }
+
+    // ===== Player Registration =====
+    
+    public async Task<(bool Success, string Message, string? VerificationToken)> RegisterPlayerAsync(
+        string firstName, string lastName, string email, string password, string adminCode)
+    {
+        // Validate admin code
+        var admin = await _context.Users
+            .FirstOrDefaultAsync(u => u.AdminCode == adminCode.Trim().ToUpper() && u.IsActive 
+                && (u.Role == UserRole.Admin || u.Role == UserRole.SuperAdmin));
+        
+        if (admin == null)
+            return (false, "Invalid admin code. Please check with your administrator.", null);
+        
+        // Check if email already exists
+        var existingUser = await _userManager.FindByEmailAsync(email);
+        if (existingUser != null)
+        {
+            if (!existingUser.EmailConfirmed)
+                return (false, "An account with this email already exists but is not verified. Please check your email or use 'Resend Verification'.", null);
+            return (false, "An account with this email already exists. Please login instead.", null);
+        }
+        
+        // Generate verification token
+        var verificationToken = ApplicationUser.GenerateVerificationToken();
+        
+        var player = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FirstName = firstName.Trim(),
+            LastName = lastName.Trim(),
+            Role = UserRole.Player,
+            IsActive = true,
+            EmailConfirmed = false,
+            CreatedAt = DateTime.UtcNow,
+            LinkedAdminId = admin.Id,
+            EmailVerificationToken = verificationToken,
+            EmailVerificationTokenExpiry = DateTime.UtcNow.AddHours(24)
+        };
+        
+        var result = await _userManager.CreateAsync(player, password);
+        
+        if (result.Succeeded)
+        {
+            return (true, "Registration successful! Please verify your email to login.", verificationToken);
+        }
+        
+        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+        return (false, errors, null);
+    }
+    
+    public async Task<(bool Success, string Message)> VerifyEmailAsync(string email, string token)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        
+        if (user == null)
+            return (false, "User not found.");
+        
+        if (user.EmailConfirmed)
+            return (true, "Email is already verified. You can login now.");
+        
+        if (user.EmailVerificationToken != token)
+            return (false, "Invalid verification token.");
+        
+        if (user.EmailVerificationTokenExpiry.HasValue && user.EmailVerificationTokenExpiry < DateTime.UtcNow)
+            return (false, "Verification token has expired. Please request a new one.");
+        
+        user.EmailConfirmed = true;
+        user.EmailVerificationToken = null;
+        user.EmailVerificationTokenExpiry = null;
+        
+        await _userManager.UpdateAsync(user);
+        
+        return (true, "Email verified successfully! You can now login.");
+    }
+    
+    public async Task<(bool Success, string Message)> ResendVerificationAsync(string email)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        
+        if (user == null)
+            return (false, "No account found with this email.");
+        
+        if (user.EmailConfirmed)
+            return (false, "Email is already verified. Please login.");
+        
+        var verificationToken = ApplicationUser.GenerateVerificationToken();
+        user.EmailVerificationToken = verificationToken;
+        user.EmailVerificationTokenExpiry = DateTime.UtcNow.AddHours(24);
+        
+        await _userManager.UpdateAsync(user);
+        
+        // In production, send email here. For now, token is returned via the page.
+        return (true, $"Verification link has been regenerated. Token: {verificationToken}");
     }
 }

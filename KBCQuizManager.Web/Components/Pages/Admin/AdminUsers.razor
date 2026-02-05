@@ -25,12 +25,22 @@
     }
 </div>
 
+<!-- Tab Switcher -->
+<div style="display: flex; gap: 5px; margin-bottom: 20px; background: #16213e; padding: 5px; border-radius: 10px; border: 1px solid #2a3f5f; width: fit-content;">
+    <button @onclick="() => SwitchTab(false)" style="padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; background: @(!_showPlayers ? "#7c3aed" : "transparent"); color: @(!_showPlayers ? "white" : "#9ca3af");">
+        👤 Public Users (@_totalCount)
+    </button>
+    <button @onclick="() => SwitchTab(true)" style="padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; background: @(_showPlayers ? "#7c3aed" : "transparent"); color: @(_showPlayers ? "white" : "#9ca3af");">
+        🎮 Registered Players (@_playerTotalCount)
+    </button>
+</div>
+
 <!-- Search -->
 <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
     <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
         <input @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" placeholder="Search by name or email..." style="flex: 1; min-width: 200px; padding: 10px 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 14px;" />
         <button @onclick="SearchUsers" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer;">🔍 Search</button>
-        <span style="color: #9ca3af; font-size: 14px;">Total: @_totalCount users</span>
+        <span style="color: #9ca3af; font-size: 14px;">Total: @(_showPlayers ? _playerTotalCount : _totalCount) users</span>
     </div>
 </div>
 
@@ -38,7 +48,10 @@
 {
     <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
 }
-else if (_users.Any())
+else if (!_showPlayers)
+{
+    @* Public Users Tab *@
+    @if (_users.Any())
 {
     <!-- Users Table -->
     <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
@@ -123,18 +136,87 @@ else
             </div>
         }
     </div>
+    }
+}
+else
+{
+    @* Registered Players Tab *@
+    @if (_players.Any())
+    {
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #1a1a2e;">
+                        <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">#</th>
+                        <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Name</th>
+                        <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;" class="hide-mobile">Email</th>
+                        <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;" class="hide-mobile">Verified</th>
+                        <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Registered</th>
+                        <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;" class="hide-mobile">Status</th>
+                        <th style="padding: 14px 20px; text-align: center; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var pidx = (_page - 1) * _pageSize; }
+                    @foreach (var player in _players)
+                    {
+                        pidx++;
+                        <tr style="border-bottom: 1px solid #2a3f5f;">
+                            <td style="padding: 12px 20px; color: #6b7280; font-size: 14px;">@pidx</td>
+                            <td style="padding: 12px 20px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
+                                        @(player.FirstName.Length > 0 ? player.FirstName[0] : '?')
+                                    </div>
+                                    <span style="color: white; font-size: 14px;">@player.FullName</span>
+                                </div>
+                            </td>
+                            <td style="padding: 12px 20px; color: #9ca3af; font-size: 14px;" class="hide-mobile">@(player.Email ?? "—")</td>
+                            <td style="padding: 12px 20px;" class="hide-mobile">
+                                <span style="padding: 2px 8px; border-radius: 10px; font-size: 11px; @(player.EmailConfirmed ? "background: rgba(16,185,129,0.2); color: #10b981;" : "background: rgba(245,158,11,0.2); color: #f59e0b;")">
+                                    @(player.EmailConfirmed ? "Verified" : "Pending")
+                                </span>
+                            </td>
+                            <td style="padding: 12px 20px; color: #9ca3af; font-size: 13px;">@player.CreatedAt.ToString("MMM dd, yyyy")</td>
+                            <td style="padding: 12px 20px;" class="hide-mobile">
+                                <span style="padding: 2px 8px; border-radius: 10px; font-size: 11px; @(player.IsActive ? "background: rgba(16,185,129,0.2); color: #10b981;" : "background: rgba(239,68,68,0.2); color: #ef4444;")">
+                                    @(player.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td style="padding: 12px 20px; text-align: center;">
+                                <button @onclick="() => TogglePlayer(player)" style="background: transparent; border: 1px solid #2a3f5f; color: @(player.IsActive ? "#f59e0b" : "#10b981"); padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    @(player.IsActive ? "⏸️" : "▶️")
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
+            <div style="font-size: 64px; margin-bottom: 15px;">🎮</div>
+            <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No registered players yet</h3>
+            <p style="color: #6b7280; margin: 0;">Players can register at <strong style="color: #a855f7;">/register</strong> using your admin code</p>
+        </div>
+    }
 }
 
 @code {
     private ApplicationUser? _currentUser;
     private List<PublicUser> _users = new();
+    private List<ApplicationUser> _players = new();
     private bool _isLoading = true;
+    private bool _showPlayers = false;
     private string _search = "";
     private string? _adminCode;
     private int _page = 1;
     private int _pageSize = 20;
     private int _totalCount = 0;
-    private int _totalPages => (int)Math.Ceiling((double)_totalCount / _pageSize);
+    private int _playerTotalCount = 0;
+    private int _totalPages => (int)Math.Ceiling((double)(_showPlayers ? _playerTotalCount : _totalCount) / _pageSize);
     private int _startPage => Math.Max(1, _page - 2);
     private int _endPage => Math.Min(_totalPages, _startPage + 4);
 
@@ -145,6 +227,7 @@ else
         {
             _adminCode = _currentUser.AdminCode;
             await LoadUsers();
+            await LoadPlayers();
         }
     }
 
@@ -160,10 +243,30 @@ else
         _isLoading = false;
     }
 
+    private async Task LoadPlayers()
+    {
+        if (_currentUser != null)
+        {
+            var result = await UserService.GetPlayersByAdminAsync(_currentUser.Id, _page, _pageSize, string.IsNullOrWhiteSpace(_search) ? null : _search);
+            _players = result.Players;
+            _playerTotalCount = result.TotalCount;
+        }
+    }
+
+    private async Task SwitchTab(bool showPlayers)
+    {
+        _showPlayers = showPlayers;
+        _page = 1;
+        _search = "";
+        if (showPlayers) await LoadPlayers();
+        else await LoadUsers();
+    }
+
     private async Task SearchUsers()
     {
         _page = 1;
-        await LoadUsers();
+        if (_showPlayers) await LoadPlayers();
+        else await LoadUsers();
     }
 
     private async Task OnSearchKeyUp(KeyboardEventArgs e)
@@ -176,7 +279,8 @@ else
     {
         if (page < 1 || page > _totalPages) return;
         _page = page;
-        await LoadUsers();
+        if (_showPlayers) await LoadPlayers();
+        else await LoadUsers();
     }
 
     private async Task CopyCode()
@@ -196,6 +300,18 @@ else
             var (success, message) = await UserService.DeletePublicUserAsync(user.Id, _currentUser!.Id);
             Snackbar.Add(message, success ? Severity.Success : Severity.Error);
             if (success) await LoadUsers();
+        }
+    }
+
+    private async Task TogglePlayer(ApplicationUser player)
+    {
+        var action = player.IsActive ? "Deactivate" : "Activate";
+        var confirm = await DialogService.ShowMessageBox($"{action} Player", $"{action} player '{player.FullName}'?", yesText: action, cancelText: "Cancel");
+        if (confirm == true)
+        {
+            var (success, message) = await UserService.TogglePlayerStatusAsync(player.Id, _currentUser!.Id);
+            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (success) await LoadPlayers();
         }
     }
 }

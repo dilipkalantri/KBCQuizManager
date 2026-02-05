@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using KBCQuizManager.Web.Data.Entities;
+using KBCQuizManager.Web.Data.Services;
 using System.Security.Claims;
 
 namespace KBCQuizManager.Web.Controllers;
@@ -13,15 +14,18 @@ public class AccountController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ILogger<AccountController> _logger;
+    private readonly IAuthService _authService;
 
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        ILogger<AccountController> logger)
+        ILogger<AccountController> logger,
+        IAuthService authService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _logger = logger;
+        _authService = authService;
     }
 
     [HttpPost("login")]
@@ -52,14 +56,26 @@ public class AccountController : Controller
                 _logger.LogWarning("Login failed: User {Email} is deactivated", email);
                 return Redirect($"/login?error=Your account has been deactivated");
             }
+            
+            if (!user.EmailConfirmed)
+            {
+                _logger.LogWarning("Login failed: Email not verified for {Email}", email);
+                return Redirect($"/login?error=Please verify your email before logging in&email={Uri.EscapeDataString(email)}");
+            }
 
             var result = await _signInManager.PasswordSignInAsync(user, password, isPersistent: true, lockoutOnFailure: false);
 
             if (result.Succeeded)
             {
-                _logger.LogInformation("Login successful for user {Email}", email);
+                _logger.LogInformation("Login successful for user {Email} with role {Role}", email, user.Role);
                 user.LastLoginAt = DateTime.UtcNow;
                 await _userManager.UpdateAsync(user);
+                
+                // Redirect based on role
+                if (user.Role == UserRole.Player)
+                {
+                    return LocalRedirect("/player");
+                }
                 return LocalRedirect(returnUrl);
             }
 
@@ -77,6 +93,64 @@ public class AccountController : Controller
             _logger.LogError(ex, "Login error for email {Email}", email);
             return Redirect($"/login?error=An error occurred. Please try again.");
         }
+    }
+
+    [HttpPost("register")]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> Register(
+        [FromForm] string firstName,
+        [FromForm] string lastName,
+        [FromForm] string email,
+        [FromForm] string password,
+        [FromForm] string adminCode)
+    {
+        try
+        {
+            _logger.LogInformation("Registration attempt for email: {Email}", email);
+
+            if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName) 
+                || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password) 
+                || string.IsNullOrWhiteSpace(adminCode))
+            {
+                return Redirect($"/register?error=All fields are required");
+            }
+
+            var (success, message, token) = await _authService.RegisterPlayerAsync(
+                firstName, lastName, email, password, adminCode);
+
+            if (success)
+            {
+                // In a production environment, you'd send this via email
+                // For now, redirect to verification page with the token
+                var verifyUrl = $"/verify-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token!)}";
+                return Redirect(verifyUrl);
+            }
+
+            return Redirect($"/register?error={Uri.EscapeDataString(message)}&firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}&email={Uri.EscapeDataString(email)}&adminCode={Uri.EscapeDataString(adminCode)}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Registration error for email {Email}", email);
+            return Redirect($"/register?error=An error occurred. Please try again.");
+        }
+    }
+
+    [HttpGet("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string token)
+    {
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
+        {
+            return Redirect("/verify-email?error=Invalid verification link");
+        }
+
+        var (success, message) = await _authService.VerifyEmailAsync(email, token);
+        
+        if (success)
+        {
+            return Redirect($"/verify-email?success=true&email={Uri.EscapeDataString(email)}");
+        }
+
+        return Redirect($"/verify-email?error={Uri.EscapeDataString(message)}&email={Uri.EscapeDataString(email)}");
     }
 
     [HttpGet("logout")]

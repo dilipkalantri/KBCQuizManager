@@ -155,6 +155,18 @@ public class DatabaseInitializer : IDatabaseInitializer
                     CONSTRAINT ""PK_PublicUsers"" PRIMARY KEY (""Id""),
                     CONSTRAINT ""FK_PublicUsers_Users_AdminId"" FOREIGN KEY (""AdminId"") REFERENCES ""Users""(""Id"") ON DELETE CASCADE
                 )");
+            
+            // Migration: Add LinkedAdminId column to Users (for Player role)
+            await AddColumnIfMissing(conn, "Users", "LinkedAdminId", @"ALTER TABLE ""Users"" ADD COLUMN ""LinkedAdminId"" uuid REFERENCES ""Users""(""Id"") ON DELETE SET NULL");
+            
+            // Migration: Add EmailVerificationToken column to Users
+            await AddColumnIfMissing(conn, "Users", "EmailVerificationToken", @"ALTER TABLE ""Users"" ADD COLUMN ""EmailVerificationToken"" text");
+            
+            // Migration: Add EmailVerificationTokenExpiry column to Users
+            await AddColumnIfMissing(conn, "Users", "EmailVerificationTokenExpiry", @"ALTER TABLE ""Users"" ADD COLUMN ""EmailVerificationTokenExpiry"" timestamp with time zone");
+            
+            // Migration: Add PlayerId column to GameSessions
+            await AddColumnIfMissing(conn, "GameSessions", "PlayerId", @"ALTER TABLE ""GameSessions"" ADD COLUMN ""PlayerId"" uuid REFERENCES ""Users""(""Id"") ON DELETE SET NULL");
         }
         catch (Exception ex)
         {

@@ -1,0 +1,104 @@
+@page "/register"
+@layout EmptyLayout
+@inject NavigationManager NavigationManager
+
+<MudThemeProvider IsDarkMode="true" />
+
+<style>
+    .reg-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); padding: 20px; font-family: 'Roboto', Arial, sans-serif; }
+    .reg-card { background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(129, 140, 248, 0.2); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); width: 100%; max-width: 460px; padding: 36px; border-radius: 16px; }
+    .reg-logo { width: 70px; height: 70px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; font-weight: 800; color: white; }
+    .reg-title { background: linear-gradient(135deg, #c084fc, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: 1.5rem; text-align: center; margin-bottom: 4px; }
+    .reg-sub { color: #94a3b8; font-size: 0.875rem; text-align: center; margin-bottom: 24px; }
+    .reg-group { margin-bottom: 16px; }
+    .reg-label { display: block; color: #94a3b8; font-size: 0.8rem; margin-bottom: 6px; }
+    .reg-input { width: 100%; padding: 12px 14px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px; color: #f1f5f9; font-size: 0.95rem; box-sizing: border-box; }
+    .reg-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2); }
+    .reg-input.code-input { text-align: center; font-size: 1.3rem; letter-spacing: 4px; text-transform: uppercase; font-weight: 700; font-family: monospace; }
+    .reg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .reg-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #7c3aed, #a855f7); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .reg-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3); }
+    .reg-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; color: #f87171; font-size: 13px; margin-bottom: 16px; text-align: center; }
+    .reg-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 10px; color: #60a5fa; font-size: 12px; margin-top: 16px; text-align: center; }
+    .reg-link { color: #818cf8; text-decoration: none; font-size: 0.875rem; }
+    .reg-link:hover { text-decoration: underline; }
+    .reg-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0; }
+</style>
+
+<div class="reg-page">
+    <div class="reg-card">
+        <div class="reg-logo">IP</div>
+        <h1 class="reg-title">Create Player Account</h1>
+        <p class="reg-sub">Register to play games and track your progress</p>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="reg-error">@_error</div>
+        }
+
+        <form method="post" action="/account/register">
+            <div class="reg-group">
+                <label class="reg-label">Admin Code *</label>
+                <input type="text" name="adminCode" class="reg-input code-input" placeholder="XXXXXX" maxlength="6" value="@_adminCode" required />
+                <div style="color: #6b7280; font-size: 11px; margin-top: 4px; text-align: center;">Enter the code provided by your administrator</div>
+            </div>
+
+            <div class="reg-divider"></div>
+
+            <div class="reg-row">
+                <div class="reg-group">
+                    <label class="reg-label">First Name *</label>
+                    <input type="text" name="firstName" class="reg-input" placeholder="John" value="@_firstName" required />
+                </div>
+                <div class="reg-group">
+                    <label class="reg-label">Last Name *</label>
+                    <input type="text" name="lastName" class="reg-input" placeholder="Doe" value="@_lastName" required />
+                </div>
+            </div>
+
+            <div class="reg-group">
+                <label class="reg-label">Email Address *</label>
+                <input type="email" name="email" class="reg-input" placeholder="you@example.com" value="@_email" required />
+            </div>
+
+            <div class="reg-group">
+                <label class="reg-label">Password *</label>
+                <input type="password" name="password" class="reg-input" placeholder="Min 8 chars, uppercase, digit, special" required />
+                <div style="color: #6b7280; font-size: 11px; margin-top: 4px;">Must include uppercase, lowercase, digit, and special character</div>
+            </div>
+
+            <button type="submit" class="reg-btn">Create Account</button>
+        </form>
+
+        <div class="reg-divider"></div>
+
+        <div style="text-align: center;">
+            <span style="color: #64748b; font-size: 0.875rem;">Already have an account? </span>
+            <a href="/login" class="reg-link">Sign In</a>
+        </div>
+
+        <div class="reg-info">
+            Your account will be linked to the admin who provided the code. After registration, you'll need to verify your email.
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? _error;
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _email = "";
+    private string _adminCode = "";
+
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        
+        if (query.TryGetValue("error", out var error)) _error = error;
+        if (query.TryGetValue("firstName", out var fn)) _firstName = fn!;
+        if (query.TryGetValue("lastName", out var ln)) _lastName = ln!;
+        if (query.TryGetValue("email", out var em)) _email = em!;
+        if (query.TryGetValue("adminCode", out var ac)) _adminCode = ac!;
+    }
+}

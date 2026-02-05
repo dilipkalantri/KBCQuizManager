@@ -3,421 +3,535 @@
 @inject IUserService UserService
 @inject ICategoryService CategoryService
 @inject IQuestionService QuestionService
+@inject IGameService GameService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Play Solo - InternsPlay</PageTitle>
 
 <MudThemeProvider IsDarkMode="true" />
 
-<style>
-    .solo-page { min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); display: flex; align-items: center; justify-content: center; padding: 20px; font-family: 'Roboto', Arial, sans-serif; }
-    .solo-box { max-width: 550px; width: 100%; }
-    .solo-header { text-align: center; margin-bottom: 30px; }
-    .solo-logo { width: 60px; height: 60px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px; font-weight: 800; color: white; }
-    .solo-title { color: white; font-size: 24px; font-weight: 700; margin: 0 0 5px; }
-    .solo-sub { color: #94a3b8; font-size: 14px; margin: 0; }
-    .solo-card { background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 16px; padding: 30px; backdrop-filter: blur(10px); }
-    .solo-input { width: 100%; padding: 14px 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px; color: #f1f5f9; font-size: 1rem; box-sizing: border-box; margin-bottom: 15px; }
-    .solo-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2); }
-    .solo-input.code-input { text-align: center; font-size: 1.5rem; letter-spacing: 5px; text-transform: uppercase; font-weight: 700; font-family: monospace; }
-    .solo-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #7c3aed, #a855f7); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .solo-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3); }
-    .solo-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-    .solo-btn-secondary { background: transparent; border: 1px solid #2a3f5f; color: #9ca3af; }
-    .solo-btn-secondary:hover { border-color: #7c3aed; color: white; box-shadow: none; }
-    .solo-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; color: #f87171; font-size: 14px; margin-bottom: 15px; text-align: center; }
-    .solo-label { color: #94a3b8; font-size: 14px; margin-bottom: 8px; display: block; }
-    .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-    .cat-card { background: #1a1a2e; border: 2px solid #2a3f5f; border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: center; }
-    .cat-card:hover { border-color: #7c3aed; }
-    .cat-card.selected { border-color: #7c3aed; background: rgba(124, 58, 237, 0.15); }
-    .cat-name { color: white; font-size: 15px; font-weight: 600; margin: 0 0 4px; }
-    .cat-count { color: #9ca3af; font-size: 12px; margin: 0; }
+<!-- Sound Elements -->
+<audio id="soundCorrect" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundWrong" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundQuestion" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundWin" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundLevelUp" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" type="audio/mpeg"></audio>
 
-    /* Quiz styles */
-    .quiz-progress { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .quiz-bar { flex: 1; height: 6px; background: #1a1a2e; border-radius: 3px; margin: 0 15px; overflow: hidden; }
-    .quiz-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); border-radius: 3px; transition: width 0.3s; }
-    .quiz-q { color: white; font-size: 18px; line-height: 1.6; margin: 0 0 25px; font-weight: 500; }
-    .quiz-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    .quiz-opt { padding: 14px 18px; border-radius: 10px; background: #1a1a2e; border: 2px solid #2a3f5f; color: #e2e8f0; font-size: 15px; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; align-items: center; gap: 12px; }
-    .quiz-opt:hover:not(.disabled) { border-color: #7c3aed; background: rgba(124, 58, 237, 0.1); }
-    .quiz-opt.selected { border-color: #7c3aed; background: rgba(124, 58, 237, 0.2); }
-    .quiz-opt.correct { border-color: #10b981; background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .quiz-opt.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-    .quiz-opt.disabled { cursor: default; opacity: 0.7; }
-    .quiz-opt-key { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
-    .quiz-timer { color: #f59e0b; font-size: 20px; font-weight: 700; }
-    .result-card { text-align: center; padding: 20px 0; }
-    .result-score { font-size: 64px; font-weight: 800; background: linear-gradient(135deg, #7c3aed, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0; }
-    .result-label { color: #94a3b8; font-size: 16px; margin: 5px 0 20px; }
-    @@media (max-width: 500px) { .cat-grid { grid-template-columns: 1fr; } .solo-box { max-width: 100%; } }
+<style>
+    body { margin: 0; }
+    .sp-page { min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); font-family: 'Roboto', Arial, sans-serif; }
+    .sp-center { max-width: 550px; margin: 0 auto; padding: 20px; }
+    .sp-wide { max-width: 950px; margin: 0 auto; padding: 20px; }
+    .sp-logo { text-align: center; padding: 20px 0 10px; }
+    .sp-logo a { text-decoration: none; color: white; font-size: 20px; font-weight: 700; }
+    .sp-card { background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 16px; padding: 30px; backdrop-filter: blur(10px); }
+    .sp-input { width: 100%; padding: 12px 14px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px; color: #f1f5f9; font-size: 1rem; box-sizing: border-box; margin-bottom: 12px; }
+    .sp-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2); }
+    .sp-input.code-input { text-align: center; font-size: 1.5rem; letter-spacing: 5px; text-transform: uppercase; font-weight: 700; font-family: monospace; }
+    .sp-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #7c3aed, #a855f7); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .sp-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3); }
+    .sp-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .sp-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; color: #f87171; font-size: 14px; margin-bottom: 15px; text-align: center; }
+    .sp-label { color: #94a3b8; font-size: 14px; margin-bottom: 6px; display: block; }
+    .sp-spinner { width: 50px; height: 50px; border: 4px solid #2a3f5f; border-top: 4px solid #7c3aed; border-radius: 50%; margin: 20px auto; animation: sp-spin 1s linear infinite; }
+    @@keyframes sp-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 
-<div class="solo-page">
-    <div class="solo-box">
-        <div class="solo-header">
-            <a href="/home" style="text-decoration: none;">
-                <div class="solo-logo">IP</div>
-                <h1 class="solo-title">InternsPlay</h1>
-            </a>
-            <p class="solo-sub">
-                @switch (_state)
-                {
-                    case State.EnterCode: <text>Enter your admin code to get started</text> break;
-                    case State.SelectCategory: <text>Choose a category to play</text> break;
-                    case State.Playing: <text>Question @(_currentIndex + 1) of @_gameQuestions.Count</text> break;
-                    case State.Result: <text>Game Over!</text> break;
-                }
-            </p>
-        </div>
-
-        <div class="solo-card">
-            @if (!string.IsNullOrEmpty(_error))
-            {
-                <div class="solo-error">@_error</div>
-            }
-
-            @switch (_state)
-            {
-                case State.EnterCode:
-                    <label class="solo-label">Admin Code</label>
-                    <input @bind="_adminCode" @bind:event="oninput" class="solo-input code-input" placeholder="XXXXXX" maxlength="6" />
-                    
-                    <label class="solo-label">Your Name</label>
-                    <input @bind="_playerName" class="solo-input" placeholder="Enter your name" />
-                    
-                    <label class="solo-label">Email (optional)</label>
-                    <input @bind="_playerEmail" type="email" class="solo-input" placeholder="your@email.com" />
-                    
-                    <button @onclick="ValidateCode" class="solo-btn" disabled="@(string.IsNullOrWhiteSpace(_adminCode) || string.IsNullOrWhiteSpace(_playerName))">
-                        Continue →
-                    </button>
-                    
-                    <div style="text-align: center; margin-top: 15px;">
-                        <a href="/home" style="color: #94a3b8; font-size: 13px; text-decoration: none;">← Back to Home</a>
-                    </div>
-                    break;
-
-                case State.SelectCategory:
-                    <p style="color: #9ca3af; font-size: 14px; margin: 0 0 5px;">Welcome, <strong style="color: white;">@_playerName</strong>! Playing from <strong style="color: #a855f7;">@_adminName</strong>'s question bank.</p>
-                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 20px;">Select a category:</p>
-                    
-                    <div class="cat-grid">
-                        @foreach (var cat in _categories)
-                        {
-                            var qCount = cat.Questions?.Count(q => q.IsActive) ?? 0;
-                            <div class="cat-card @(cat.Id == _selectedCategoryId ? "selected" : "")" @onclick="() => SelectCategory(cat.Id)">
-                                <p class="cat-name">@cat.Name</p>
-                                <p class="cat-count">@qCount questions</p>
-                            </div>
-                        }
-                    </div>
-                    
-                    @if (_categories.Count == 0)
-                    {
-                        <p style="color: #6b7280; text-align: center; margin: 20px 0;">No categories available.</p>
-                    }
-                    
-                    <div style="display: flex; gap: 10px;">
-                        <button @onclick="BackToCode" class="solo-btn solo-btn-secondary" style="flex: 1;">← Back</button>
-                        <button @onclick="StartGame" class="solo-btn" style="flex: 2;" disabled="@(_selectedCategoryId == Guid.Empty)">
-                            Start Game 🚀
-                        </button>
-                    </div>
-                    break;
-
-                case State.Playing:
-                    @if (_currentQuestion != null)
-                    {
-                        <!-- Progress -->
-                        <div class="quiz-progress">
-                            <span style="color: #9ca3af; font-size: 13px;">@(_currentIndex + 1)/@_gameQuestions.Count</span>
-                            <div class="quiz-bar">
-                                <div class="quiz-fill" style="width: @((_currentIndex + 1) * 100.0 / _gameQuestions.Count)%"></div>
-                            </div>
-                            <span class="quiz-timer">@_timeLeft s</span>
-                        </div>
-
-                        <!-- Level badge -->
-                        <div style="margin-bottom: 15px;">
-                            <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: @GetLevelColor(_currentQuestion.Level); color: white;">Level @_currentQuestion.Level</span>
-                            <span style="color: #fbbf24; font-size: 13px; margin-left: 10px;">@KBCPrizeStructure.FormatPrize(_currentQuestion.GetPrizeAmount())</span>
-                        </div>
-                        
-                        <!-- Question -->
-                        <p class="quiz-q">@_currentQuestion.QuestionText</p>
-                        
-                        <!-- Options -->
-                        <div class="quiz-opts">
-                            @foreach (var opt in new[] { ("A", _currentQuestion.OptionA, CorrectOption.A), ("B", _currentQuestion.OptionB, CorrectOption.B), ("C", _currentQuestion.OptionC, CorrectOption.C), ("D", _currentQuestion.OptionD, CorrectOption.D) })
-                            {
-                                var key = opt.Item1;
-                                var text = opt.Item2;
-                                var val = opt.Item3;
-                                var css = "quiz-opt";
-                                if (_answered)
-                                {
-                                    css += " disabled";
-                                    if (val == _currentQuestion.CorrectAnswer) css += " correct";
-                                    else if (val == _selectedAnswer) css += " wrong";
-                                }
-                                else if (val == _selectedAnswer)
-                                {
-                                    css += " selected";
-                                }
-                                
-                                <div class="@css" @onclick="() => SelectAnswer(val)">
-                                    <span class="quiz-opt-key">@key</span>
-                                    <span>@text</span>
-                                </div>
-                            }
-                        </div>
-                        
-                        @if (!_answered)
-                        {
-                            <button @onclick="SubmitAnswer" class="solo-btn" disabled="@(_selectedAnswer == null)">
-                                Lock Answer 🔒
-                            </button>
-                        }
-                        else
-                        {
-                            <div style="text-align: center; margin-bottom: 15px;">
-                                @if (_lastWasCorrect)
-                                {
-                                    <p style="color: #10b981; font-size: 18px; font-weight: 600; margin: 0;">✅ Correct!</p>
-                                }
-                                else
-                                {
-                                    <p style="color: #ef4444; font-size: 18px; font-weight: 600; margin: 0;">❌ Wrong!</p>
-                                }
-                            </div>
-                            <button @onclick="NextQuestion" class="solo-btn">
-                                @(_currentIndex + 1 < _gameQuestions.Count ? "Next Question →" : "See Results 🏆")
-                            </button>
-                        }
-                    }
-                    break;
-
-                case State.Result:
-                    <div class="result-card">
-                        <div style="font-size: 48px; margin-bottom: 10px;">🏆</div>
-                        <p class="result-score">@_correctCount / @_gameQuestions.Count</p>
-                        <p class="result-label">Questions Correct</p>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; text-align: center;">
-                            <div style="background: #1a1a2e; border-radius: 10px; padding: 15px;">
-                                <div style="color: #fbbf24; font-size: 24px; font-weight: 700;">@_totalScore.ToString("N0")</div>
-                                <div style="color: #6b7280; font-size: 12px;">Total Score</div>
-                            </div>
-                            <div style="background: #1a1a2e; border-radius: 10px; padding: 15px;">
-                                <div style="color: #10b981; font-size: 24px; font-weight: 700;">@((_correctCount * 100.0 / Math.Max(1, _gameQuestions.Count)).ToString("0"))%</div>
-                                <div style="color: #6b7280; font-size: 12px;">Accuracy</div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px;">
-                            <button @onclick="PlayAgain" class="solo-btn solo-btn-secondary" style="flex: 1;">Play Again</button>
-                            <button @onclick="GoHome" class="solo-btn" style="flex: 1;">Home</button>
-                        </div>
-                    </div>
-                    break;
-            }
-        </div>
+<div class="sp-page">
+    <div class="sp-logo">
+        <a href="/home">🎮 InternsPlay</a>
     </div>
+
+    @if (_state == GameState.EnterCode)
+    {
+        <div class="sp-center">
+            <div class="sp-card">
+                <h2 style="color: white; text-align: center; margin: 0 0 5px 0;">Play KBC Solo</h2>
+                <p style="color: #94a3b8; text-align: center; margin: 0 0 25px 0;">Enter your admin code to start</p>
+                
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="sp-error">@_error</div>
+                }
+                
+                <label class="sp-label">Admin Code</label>
+                <input @bind="_adminCode" @bind:event="oninput" class="sp-input code-input" placeholder="XXXXXX" maxlength="6" />
+                
+                <label class="sp-label">Your Name</label>
+                <input @bind="_playerName" class="sp-input" placeholder="Enter your name" />
+                
+                <label class="sp-label">Email (optional)</label>
+                <input @bind="_playerEmail" type="email" class="sp-input" placeholder="your@email.com" />
+                
+                <button @onclick="ValidateCode" class="sp-btn" disabled="@(string.IsNullOrWhiteSpace(_adminCode) || string.IsNullOrWhiteSpace(_playerName))">
+                    Continue →
+                </button>
+                
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="/home" style="color: #94a3b8; font-size: 13px; text-decoration: none;">← Back to Home</a>
+                    <span style="color: #4b5563; margin: 0 10px;">|</span>
+                    <a href="/register" style="color: #818cf8; font-size: 13px; text-decoration: none;">Create Account for full tracking →</a>
+                </div>
+            </div>
+        </div>
+    }
+    else if (_state == GameState.Ready)
+    {
+        <div class="sp-center">
+            <div class="sp-card" style="text-align: center;">
+                <div style="font-size: 80px; margin-bottom: 20px;">🎮</div>
+                <h1 style="color: white; font-size: 28px; margin: 0 0 10px 0;">Kaun Banega Crorepati</h1>
+                <p style="color: #9ca3af; margin: 0 0 5px 0;">Welcome, <strong style="color: white;">@_playerName</strong>!</p>
+                <p style="color: #6b7280; margin: 0 0 25px 0;">Playing from <strong style="color: #a855f7;">@_adminName</strong>'s question bank</p>
+                
+                <div style="background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 25px; text-align: left;">
+                    <h3 style="color: white; margin: 0 0 12px 0; font-size: 15px;">Question Availability</h3>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        @for (int i = 1; i <= 15; i++)
+                        {
+                            var level = i;
+                            var count = _levelCounts.GetValueOrDefault(level, 0);
+                            <span style="padding: 4px 9px; border-radius: 5px; font-size: 11px; background: @(count > 0 ? "#10b981" : "#ef4444"); color: white;">
+                                L@level: @count
+                            </span>
+                        }
+                    </div>
+                    @if (_missingLevels.Any())
+                    {
+                        <p style="color: #ef4444; font-size: 12px; margin: 12px 0 0 0;">⚠️ Missing levels: @string.Join(", ", _missingLevels). Cannot start game.</p>
+                    }
+                </div>
+                
+                <button @onclick="StartGame" class="sp-btn" disabled="@(_missingLevels.Any())">
+                    ▶️ Start Game — Answer 15 questions to win ₹7 Crore!
+                </button>
+                
+                <div style="margin-top: 15px;">
+                    <button @onclick="BackToCode" style="background: transparent; border: none; color: #94a3b8; font-size: 13px; cursor: pointer;">← Change Code</button>
+                </div>
+            </div>
+        </div>
+    }
+    else if (_state == GameState.Loading)
+    {
+        <div class="sp-center" style="text-align: center; padding-top: 80px;">
+            <div style="font-size: 60px; margin-bottom: 20px;">🎯</div>
+            <h2 style="color: white;">Loading Question...</h2>
+            <p style="color: #9ca3af;">Level @(_gameSession?.CurrentLevel ?? 1)</p>
+            <div class="sp-spinner"></div>
+        </div>
+    }
+    else if (_state == GameState.Playing && _currentQuestion != null && _gameSession != null)
+    {
+        <div class="sp-wide">
+            <!-- Top Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="background: #7c3aed; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px;">
+                        Level @_gameSession.CurrentLevel / 15
+                    </span>
+                    <span style="color: #9ca3af; font-size: 14px;">@_playerName</span>
+                </div>
+                
+                <!-- Timer -->
+                <div style="width: 56px; height: 56px; border-radius: 50%; border: 3px solid @(_timeRemaining <= 10 ? "#ef4444" : "#7c3aed"); display: flex; align-items: center; justify-content: center;">
+                    <span style="color: @(_timeRemaining <= 10 ? "#ef4444" : "white"); font-size: 22px; font-weight: 700;">@_timeRemaining</span>
+                </div>
+                
+                <div style="text-align: right;">
+                    <p style="color: #9ca3af; margin: 0; font-size: 12px;">Prize</p>
+                    <p style="color: #fbbf24; margin: 0; font-size: 22px; font-weight: 700;">@KBCPrizeStructure.FormatPrize(_currentQuestion.GetPrizeAmount())</p>
+                </div>
+            </div>
+            
+            <!-- Game Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 190px; gap: 20px;">
+                <div>
+                    <!-- Question -->
+                    <div style="background: linear-gradient(180deg, #0f172a, #1e293b); border: 2px solid #7c3aed; border-radius: 16px; padding: 28px; margin-bottom: 20px;">
+                        <h2 style="color: white; font-size: 19px; text-align: center; margin: 0; line-height: 1.6;">@_currentQuestion.QuestionText</h2>
+                    </div>
+                    
+                    <!-- Options -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                        @foreach (var opt in GetOptions())
+                        {
+                            var isHidden = _hiddenOptions.Contains(opt.Ans);
+                            var isSelected = _selectedAnswer == opt.Ans;
+                            var isCorrect = _showAnswer && opt.Ans == _currentQuestion.CorrectAnswer;
+                            var isWrong = _showAnswer && isSelected && !isCorrect;
+                            
+                            <button @onclick="() => SelectAnswer(opt.Ans)" disabled="@(_showAnswer || isHidden)"
+                                    style="padding: 16px 18px; border-radius: 12px; text-align: left; cursor: @(_showAnswer || isHidden ? "default" : "pointer"); opacity: @(isHidden ? "0.3" : "1");
+                                           background: @(isCorrect ? "rgba(16, 185, 129, 0.3)" : isWrong ? "rgba(239, 68, 68, 0.3)" : isSelected ? "rgba(124, 58, 237, 0.3)" : "rgba(26, 26, 46, 0.9)");
+                                           border: 2px solid @(isCorrect ? "#10b981" : isWrong ? "#ef4444" : isSelected ? "#7c3aed" : "#2a3f5f");
+                                           color: white; font-size: 15px; transition: all 0.2s;">
+                                <strong style="color: @(isCorrect ? "#10b981" : isWrong ? "#ef4444" : "#7c3aed"); margin-right: 8px;">@opt.Label.</strong>
+                                @opt.Text
+                                @if (isCorrect) { <span style="float: right; color: #10b981;">✓</span> }
+                                @if (isWrong) { <span style="float: right; color: #ef4444;">✗</span> }
+                            </button>
+                        }
+                    </div>
+                    
+                    <!-- Lifelines -->
+                    <div style="background: rgba(22, 33, 62, 0.9); border: 1px solid #2a3f5f; border-radius: 12px; padding: 14px; margin-bottom: 18px;">
+                        <p style="color: #9ca3af; font-size: 11px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">Lifelines</p>
+                        <div style="display: flex; gap: 8px;">
+                            <button @onclick="UseFiftyFifty" disabled="@(_localFiftyFiftyUsed || _showAnswer)"
+                                    style="flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; border: 1px solid @(_localFiftyFiftyUsed ? "#4b5563" : "#f59e0b"); background: @(_localFiftyFiftyUsed ? "#1a1a2e" : "rgba(245, 158, 11, 0.1)"); color: @(_localFiftyFiftyUsed ? "#4b5563" : "#f59e0b"); opacity: @(_localFiftyFiftyUsed ? "0.5" : "1");">
+                                50:50
+                            </button>
+                            <button @onclick="UsePhoneAFriend" disabled="@(_localPhoneAFriendUsed || _showAnswer)"
+                                    style="flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; border: 1px solid @(_localPhoneAFriendUsed ? "#4b5563" : "#3b82f6"); background: @(_localPhoneAFriendUsed ? "#1a1a2e" : "rgba(59, 130, 246, 0.1)"); color: @(_localPhoneAFriendUsed ? "#4b5563" : "#3b82f6"); opacity: @(_localPhoneAFriendUsed ? "0.5" : "1");">
+                                📞 Phone
+                            </button>
+                            <button @onclick="UseAudiencePoll" disabled="@(_localAudiencePollUsed || _showAnswer)"
+                                    style="flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; border: 1px solid @(_localAudiencePollUsed ? "#4b5563" : "#10b981"); background: @(_localAudiencePollUsed ? "#1a1a2e" : "rgba(16, 185, 129, 0.1)"); color: @(_localAudiencePollUsed ? "#4b5563" : "#10b981"); opacity: @(_localAudiencePollUsed ? "0.5" : "1");">
+                                👥 Audience
+                            </button>
+                            <button @onclick="UseExpertAdvice" disabled="@(_localExpertAdviceUsed || _showAnswer)"
+                                    style="flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; border: 1px solid @(_localExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); background: @(_localExpertAdviceUsed ? "#1a1a2e" : "rgba(139, 92, 246, 0.1)"); color: @(_localExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); opacity: @(_localExpertAdviceUsed ? "0.5" : "1");">
+                                🎓 Expert
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Lifeline Result -->
+                    @if (!string.IsNullOrEmpty(_lifelineResult))
+                    {
+                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 10px; padding: 14px; margin-bottom: 18px;">
+                            <p style="color: #3b82f6; margin: 0; font-size: 14px;">@_lifelineResult</p>
+                        </div>
+                    }
+                    @if (_audiencePoll != null)
+                    {
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 10px; padding: 14px; margin-bottom: 18px;">
+                            <p style="color: #10b981; margin: 0 0 8px 0; font-weight: 600; font-size: 14px;">Audience Poll:</p>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                                @foreach (var (lbl, pct) in new[] { ("A", _audiencePoll.PercentageA), ("B", _audiencePoll.PercentageB), ("C", _audiencePoll.PercentageC), ("D", _audiencePoll.PercentageD) })
+                                {
+                                    <div style="text-align: center;">
+                                        <div style="height: @(pct)px; max-height: 50px; background: #10b981; border-radius: 3px; margin-bottom: 4px;"></div>
+                                        <span style="color: white; font-size: 12px;">@lbl: @pct%</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        @if (_selectedAnswer.HasValue && !_showAnswer)
+                        {
+                            <button @onclick="LockAnswer" style="background: #f59e0b; color: white; border: none; padding: 14px 36px; border-radius: 10px; font-size: 17px; font-weight: 600; cursor: pointer;">
+                                🔒 Lock Answer
+                            </button>
+                        }
+                        @if (_showAnswer)
+                        {
+                            @if (_isCorrect)
+                            {
+                                <button @onclick="NextQuestion" style="background: #10b981; color: white; border: none; padding: 14px 36px; border-radius: 10px; font-size: 17px; font-weight: 600; cursor: pointer;">
+                                    @(_gameSession.CurrentLevel >= 15 ? "🏆 Claim Prize" : "Next Question →")
+                                </button>
+                            }
+                            else
+                            {
+                                <button @onclick="() => { _state = GameState.GameOver; }" style="background: #ef4444; color: white; border: none; padding: 14px 36px; border-radius: 10px; font-size: 17px; font-weight: 600; cursor: pointer;">
+                                    End Game
+                                </button>
+                            }
+                        }
+                        @if (!_showAnswer)
+                        {
+                            <button @onclick="QuitGame" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 14px 24px; border-radius: 10px; font-size: 15px; cursor: pointer;">
+                                Quit & Take @KBCPrizeStructure.FormatPrize(_gameSession.CurrentPrize)
+                            </button>
+                        }
+                    </div>
+                </div>
+                
+                <!-- Prize Ladder -->
+                <div style="background: rgba(22, 33, 62, 0.9); border: 1px solid #2a3f5f; border-radius: 12px; padding: 14px;">
+                    <p style="color: #9ca3af; font-size: 10px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">Prize Ladder</p>
+                    @for (int i = 15; i >= 1; i--)
+                    {
+                        var level = i;
+                        var isCurrent = level == _gameSession.CurrentLevel;
+                        var isPassed = level < _gameSession.CurrentLevel;
+                        var isMilestone = level == 5 || level == 10;
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 5px 7px; margin-bottom: 1px; border-radius: 3px; background: @(isCurrent ? "#7c3aed" : isPassed ? "rgba(16, 185, 129, 0.2)" : "transparent"); border: @(isMilestone ? "1px solid #fbbf24" : "none");">
+                            <span style="color: @(isCurrent ? "white" : isPassed ? "#10b981" : "#6b7280"); font-size: 11px;">@level</span>
+                            <span style="color: @(isCurrent ? "white" : isPassed ? "#10b981" : isMilestone ? "#fbbf24" : "#9ca3af"); font-size: 11px; font-weight: @(isMilestone ? "600" : "400");">
+                                @KBCPrizeStructure.FormatPrize(KBCPrizeStructure.LevelPrizes[level])
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else if (_state == GameState.GameOver && _gameSession != null)
+    {
+        <div class="sp-center" style="text-align: center; padding-top: 30px;">
+            <div style="font-size: 100px; margin-bottom: 20px;">@(_gameSession.Status == GameStatus.Won ? "🏆" : "😔")</div>
+            <h1 style="color: white; font-size: 34px; margin: 0 0 10px 0;">
+                @(_gameSession.Status == GameStatus.Won ? "Congratulations!" : "Game Over")
+            </h1>
+            <p style="color: #9ca3af; font-size: 18px; margin: 0 0 25px 0;">@_playerName</p>
+            
+            <div style="background: linear-gradient(135deg, rgba(26, 26, 46, 0.9), rgba(22, 33, 62, 0.9)); border: 2px solid #fbbf24; border-radius: 16px; padding: 28px; margin-bottom: 25px;">
+                <p style="color: #9ca3af; margin: 0 0 8px 0;">You Won</p>
+                <h2 style="color: #fbbf24; font-size: 44px; margin: 0;">@KBCPrizeStructure.FormatPrize(_gameSession.FinalPrize)</h2>
+                <p style="color: #6b7280; margin: 12px 0 0 0; font-size: 14px;">
+                    Reached Level @_gameSession.CurrentLevel | @_gameSession.CorrectAnswers/@_gameSession.QuestionsAnswered Correct | Time: @_gameSession.GetDuration()
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button @onclick="PlayAgain" style="background: #7c3aed; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                    🔄 Play Again
+                </button>
+                <a href="/home" style="background: transparent; border: 1px solid #2a3f5f; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 16px;">
+                    🏠 Home
+                </a>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <a href="/register" style="color: #818cf8; text-decoration: none; font-size: 13px;">Create an account to track all your games →</a>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
-    enum State { EnterCode, SelectCategory, Playing, Result }
+    enum GameState { EnterCode, Ready, Loading, Playing, GameOver }
     
-    private State _state = State.EnterCode;
+    private GameState _state = GameState.EnterCode;
     private string _error = "";
     private string _adminCode = "";
     private string _playerName = "";
     private string _playerEmail = "";
     private string _adminName = "";
     private Guid _adminId;
-    private List<Category> _categories = new();
-    private Guid _selectedCategoryId = Guid.Empty;
+    private Dictionary<int, int> _levelCounts = new();
+    private List<int> _missingLevels = new();
     
     // Game state
-    private List<Question> _gameQuestions = new();
-    private int _currentIndex = 0;
-    private Question? _currentQuestion => _currentIndex < _gameQuestions.Count ? _gameQuestions[_currentIndex] : null;
+    private GameSession? _gameSession;
+    private Question? _currentQuestion;
+    private List<Guid> _usedQuestionIds = new();
     private CorrectOption? _selectedAnswer;
-    private bool _answered = false;
-    private bool _lastWasCorrect = false;
-    private int _correctCount = 0;
-    private long _totalScore = 0;
-    private int _timeLeft = 30;
+    private bool _showAnswer = false;
+    private bool _isCorrect = false;
+    private bool _isDisposed = false;
+    
+    // Timer
+    private int _timeRemaining = 30;
     private System.Threading.Timer? _timer;
+    private int _timeTaken = 0;
+    
+    // Lifelines
+    private List<CorrectOption> _hiddenOptions = new();
+    private string _lifelineResult = "";
+    private AudiencePollResult? _audiencePoll;
+    private LifelineUsage _currentLifelineUsage = new();
+    private bool _localFiftyFiftyUsed = false;
+    private bool _localPhoneAFriendUsed = false;
+    private bool _localAudiencePollUsed = false;
+    private bool _localExpertAdviceUsed = false;
 
     private async Task ValidateCode()
     {
         _error = "";
-        
-        if (string.IsNullOrWhiteSpace(_adminCode) || _adminCode.Trim().Length < 4)
-        {
-            _error = "Please enter a valid admin code";
-            return;
-        }
-        
-        if (string.IsNullOrWhiteSpace(_playerName))
-        {
-            _error = "Please enter your name";
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(_adminCode) || _adminCode.Trim().Length < 4) { _error = "Please enter a valid admin code"; return; }
+        if (string.IsNullOrWhiteSpace(_playerName)) { _error = "Please enter your name"; return; }
         
         var admin = await UserService.ValidateAdminCodeAsync(_adminCode.Trim());
-        if (admin == null)
-        {
-            _error = "Invalid admin code. Please check and try again.";
-            return;
-        }
+        if (admin == null) { _error = "Invalid admin code. Please check and try again."; return; }
         
         _adminId = admin.Id;
         _adminName = admin.FullName;
         
-        // Register or get existing public user
         await UserService.RegisterOrGetPublicUserAsync(_playerName.Trim(), _playerEmail.Trim(), _adminId);
         
-        // Load categories
-        _categories = await CategoryService.GetCategoriesAsync(_adminId);
-        _categories = _categories.Where(c => c.IsActive && c.Questions.Any(q => q.IsActive)).ToList();
+        _levelCounts = await QuestionService.GetQuestionCountByLevelAsync(_adminId);
+        _missingLevels = Enumerable.Range(1, 15).Where(l => _levelCounts.GetValueOrDefault(l, 0) == 0).ToList();
         
-        if (_categories.Count == 0)
-        {
-            _error = "This admin has no categories with active questions yet.";
-            return;
-        }
-        
-        _state = State.SelectCategory;
-    }
-
-    private void SelectCategory(Guid catId)
-    {
-        _selectedCategoryId = catId;
+        _state = GameState.Ready;
     }
 
     private async Task StartGame()
     {
-        if (_selectedCategoryId == Guid.Empty) return;
+        if (_missingLevels.Any()) return;
         
-        // Get questions for selected category - random 15 or all if less
-        var allQuestions = await QuestionService.GetQuestionsAsync(_adminId, _selectedCategoryId);
-        allQuestions = allQuestions.Where(q => q.IsActive).ToList();
+        _gameSession = await GameService.StartNewGameAsync(_playerName, _adminId);
+        _usedQuestionIds.Clear();
+        _localFiftyFiftyUsed = false; _localPhoneAFriendUsed = false;
+        _localAudiencePollUsed = false; _localExpertAdviceUsed = false;
         
-        if (allQuestions.Count == 0)
-        {
-            _error = "No active questions in this category.";
-            return;
-        }
-        
-        // Shuffle and take up to 15
-        var rng = new Random();
-        _gameQuestions = allQuestions.OrderBy(_ => rng.Next()).Take(15).OrderBy(q => q.Level).ToList();
-        
-        _currentIndex = 0;
-        _correctCount = 0;
-        _totalScore = 0;
-        _answered = false;
-        _selectedAnswer = null;
-        _state = State.Playing;
-        StartTimer();
+        await LoadQuestion();
     }
 
-    private void SelectAnswer(CorrectOption answer)
+    private async Task LoadQuestion()
     {
-        if (_answered) return;
-        _selectedAnswer = answer;
-    }
-
-    private void SubmitAnswer()
-    {
-        if (_selectedAnswer == null || _answered || _currentQuestion == null) return;
-        
-        _answered = true;
-        _lastWasCorrect = _selectedAnswer == _currentQuestion.CorrectAnswer;
-        
-        if (_lastWasCorrect)
-        {
-            _correctCount++;
-            _totalScore += _currentQuestion.GetPrizeAmount();
-        }
-        
-        StopTimer();
+        if (_gameSession == null) return;
+        _timer?.Dispose(); _timer = null;
+        _state = GameState.Loading;
+        _currentQuestion = null;
         StateHasChanged();
-    }
-
-    private void NextQuestion()
-    {
-        _currentIndex++;
-        if (_currentIndex >= _gameQuestions.Count)
-        {
-            _state = State.Result;
-            StopTimer();
-            return;
-        }
         
-        _selectedAnswer = null;
-        _answered = false;
-        StartTimer();
+        try
+        {
+            await Task.Delay(100);
+            _currentQuestion = await GameService.GetQuestionForLevelAsync(_gameSession.CurrentLevel, _adminId, _usedQuestionIds);
+            
+            if (_currentQuestion == null) { _error = $"No question for level {_gameSession.CurrentLevel}"; _state = GameState.GameOver; return; }
+            
+            _usedQuestionIds.Add(_currentQuestion.Id);
+            _selectedAnswer = null; _showAnswer = false; _isCorrect = false;
+            _hiddenOptions.Clear(); _lifelineResult = ""; _audiencePoll = null;
+            _currentLifelineUsage = new();
+            
+            _state = GameState.Playing;
+            await PlaySound("soundQuestion");
+            
+            _timeRemaining = _currentQuestion.GetTimeLimitForLevel();
+            _timeTaken = 0;
+            StartTimer();
+        }
+        catch (Exception ex) { _error = ex.Message; _state = GameState.GameOver; }
     }
 
     private void StartTimer()
     {
-        StopTimer();
-        _timeLeft = 30;
+        _timer?.Dispose();
         _timer = new System.Threading.Timer(async _ =>
         {
-            _timeLeft--;
-            if (_timeLeft <= 0)
+            try
             {
-                StopTimer();
-                if (!_answered)
+                if (_timer == null || _isDisposed) return;
+                _timeRemaining--; _timeTaken++;
+                if (_timeRemaining <= 0)
                 {
-                    _answered = true;
-                    _lastWasCorrect = false;
+                    _timer?.Dispose(); _timer = null;
+                    if (!_isDisposed) await InvokeAsync(async () => { await TimeOut(); StateHasChanged(); });
                 }
+                else if (!_isDisposed) await InvokeAsync(StateHasChanged);
             }
-            await InvokeAsync(StateHasChanged);
+            catch { }
         }, null, 1000, 1000);
     }
 
-    private void StopTimer()
+    private async Task TimeOut()
     {
-        _timer?.Dispose();
-        _timer = null;
+        _timer?.Dispose(); _timer = null;
+        _showAnswer = true; _isCorrect = false;
+        try
+        {
+            _gameSession = await GameService.RecordAnswerAsync(_gameSession!.Id, _currentQuestion!.Id, null, _timeTaken, true, _currentLifelineUsage);
+            _state = GameState.GameOver;
+        }
+        catch { _state = GameState.GameOver; }
+    }
+
+    private void SelectAnswer(CorrectOption answer)
+    {
+        if (!_showAnswer && !_hiddenOptions.Contains(answer)) _selectedAnswer = answer;
+    }
+
+    private async Task LockAnswer()
+    {
+        if (!_selectedAnswer.HasValue || _currentQuestion == null || _gameSession == null) return;
+        _timer?.Dispose(); _timer = null;
+        _showAnswer = true;
+        _isCorrect = _selectedAnswer == _currentQuestion.CorrectAnswer;
+        await PlaySound(_isCorrect ? "soundCorrect" : "soundWrong");
+        
+        try
+        {
+            _gameSession = await GameService.RecordAnswerAsync(_gameSession.Id, _currentQuestion.Id, _selectedAnswer, _timeTaken, false, _currentLifelineUsage);
+            if (!_isCorrect || _gameSession.Status != GameStatus.InProgress)
+            {
+                if (_gameSession.Status == GameStatus.Won) { await PlaySound("soundWin"); }
+                _state = GameState.GameOver;
+            }
+            else await PlaySound("soundLevelUp");
+        }
+        catch { }
+    }
+
+    private async Task NextQuestion()
+    {
+        _timer?.Dispose(); _timer = null;
+        if (_gameSession?.Status == GameStatus.Won) _state = GameState.GameOver;
+        else
+        {
+            try { await LoadQuestion(); }
+            catch { _state = GameState.GameOver; }
+        }
+    }
+
+    private async Task QuitGame()
+    {
+        _timer?.Dispose(); _timer = null;
+        _gameSession = await GameService.QuitGameAsync(_gameSession!.Id);
+        _state = GameState.GameOver;
     }
 
     private void PlayAgain()
     {
-        _state = State.SelectCategory;
-        _selectedCategoryId = Guid.Empty;
+        _timer?.Dispose(); _timer = null;
+        _gameSession = null; _currentQuestion = null; _usedQuestionIds.Clear();
+        _localFiftyFiftyUsed = false; _localPhoneAFriendUsed = false;
+        _localAudiencePollUsed = false; _localExpertAdviceUsed = false;
         _error = "";
+        _state = GameState.Ready;
     }
 
-    private void BackToCode()
+    private void BackToCode() { _state = GameState.EnterCode; _error = ""; }
+
+    // Lifelines
+    private async Task UseFiftyFifty()
     {
-        _state = State.EnterCode;
-        _error = "";
+        if (_currentQuestion == null || _localFiftyFiftyUsed || _showAnswer) return;
+        try { _localFiftyFiftyUsed = true; var (removed, _) = await GameService.GetFiftyFiftyOptionsAsync(_currentQuestion); _hiddenOptions = removed; _currentLifelineUsage.FiftyFifty = true; StateHasChanged(); }
+        catch { _localFiftyFiftyUsed = false; }
     }
 
-    private void GoHome()
+    private async Task UsePhoneAFriend()
     {
-        NavigationManager.NavigateTo("/home");
+        if (_currentQuestion == null || _localPhoneAFriendUsed || _showAnswer) return;
+        try { _localPhoneAFriendUsed = true; _lifelineResult = await GameService.GetPhoneAFriendHintAsync(_currentQuestion); _currentLifelineUsage.PhoneAFriend = true; StateHasChanged(); }
+        catch { _localPhoneAFriendUsed = false; }
     }
 
-    private string GetLevelColor(int level) => level switch
+    private async Task UseAudiencePoll()
     {
-        <= 5 => "#10b981",
-        <= 10 => "#f59e0b",
-        <= 13 => "#ef4444",
-        _ => "#8b5cf6"
-    };
-
-    public void Dispose()
-    {
-        StopTimer();
+        if (_currentQuestion == null || _localAudiencePollUsed || _showAnswer) return;
+        try { _localAudiencePollUsed = true; _audiencePoll = await GameService.GetAudiencePollAsync(_currentQuestion); _currentLifelineUsage.AudiencePoll = true; StateHasChanged(); }
+        catch { _localAudiencePollUsed = false; }
     }
+
+    private async Task UseExpertAdvice()
+    {
+        if (_currentQuestion == null || _localExpertAdviceUsed || _showAnswer) return;
+        try { _localExpertAdviceUsed = true; var (answer, confidence) = await GameService.GetExpertAdviceAsync(_currentQuestion); _lifelineResult = $"🎓 Expert says: \"I'm {confidence}% confident the answer is Option {answer}\""; _currentLifelineUsage.ExpertAdvice = true; StateHasChanged(); }
+        catch { _localExpertAdviceUsed = false; }
+    }
+
+    private (string Label, string Text, CorrectOption Ans)[] GetOptions() => _currentQuestion == null
+        ? Array.Empty<(string, string, CorrectOption)>()
+        : new[] { ("A", _currentQuestion.OptionA, CorrectOption.A), ("B", _currentQuestion.OptionB, CorrectOption.B), ("C", _currentQuestion.OptionC, CorrectOption.C), ("D", _currentQuestion.OptionD, CorrectOption.D) };
+
+    private async Task PlaySound(string id)
+    {
+        try { await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{id}')?.play()"); } catch { }
+    }
+
+    public void Dispose() { _isDisposed = true; _timer?.Dispose(); _timer = null; }
 }

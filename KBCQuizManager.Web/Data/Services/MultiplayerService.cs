@@ -10,7 +10,7 @@ public interface IMultiplayerService
     Task<MultiplayerGame?> GetGameByIdAsync(Guid gameId);
     Task<List<MultiplayerGame>> GetHostGamesAsync(Guid hostId);
     Task<List<MultiplayerPlayer>> GetPlayersAsync(Guid gameId);
-    Task<List<LeaderboardEntry>> GetLeaderboardAsync(Guid gameId);
+    Task<List<MultiplayerLeaderboardEntry>> GetLeaderboardAsync(Guid gameId);
     Task DeleteGameAsync(Guid gameId);
     Task<bool> HasQuestionsForAllLevelsAsync(Guid hostId, int levels);
 }
@@ -97,7 +97,7 @@ public class MultiplayerService : IMultiplayerService
         catch (Exception ex) { _logger.LogError(ex, "Error getting players"); return new(); }
     }
 
-    public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(Guid gameId)
+    public async Task<List<MultiplayerLeaderboardEntry>> GetLeaderboardAsync(Guid gameId)
     {
         try
         {
@@ -106,7 +106,7 @@ public class MultiplayerService : IMultiplayerService
                 .OrderByDescending(p => p.TotalPoints).ThenBy(p => p.TotalTimeTaken)
                 .ToListAsync();
 
-            return players.Select((p, index) => new LeaderboardEntry
+            return players.Select((p, index) => new MultiplayerLeaderboardEntry
             {
                 Rank = index + 1,
                 PlayerId = p.Id,
@@ -149,7 +149,7 @@ public class MultiplayerService : IMultiplayerService
     }
 }
 
-public class LeaderboardEntry
+public class MultiplayerLeaderboardEntry
 {
     public int Rank { get; set; }
     public Guid PlayerId { get; set; }

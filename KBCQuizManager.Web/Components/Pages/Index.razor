@@ -3,6 +3,7 @@
 @inject IQuestionService QuestionService
 @inject ICategoryService CategoryService
 @inject IGameService GameService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Dashboard - InternsPlay</PageTitle>
 
@@ -165,6 +166,13 @@
         _currentUser = await AuthService.GetCurrentUserAsync();
         if (_currentUser != null)
         {
+            // Redirect players to their dashboard
+            if (_currentUser.Role == UserRole.Player)
+            {
+                NavigationManager.NavigateTo("/player");
+                return;
+            }
+            
             _stats = await QuestionService.GetStatisticsAsync(_currentUser.Id);
             _categories = await CategoryService.GetCategoriesAsync(_currentUser.Id);
             _gameStats = await GameService.GetGameStatisticsAsync(_currentUser.Id);

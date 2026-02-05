@@ -18,11 +18,28 @@ public class ApplicationUser : IdentityUser<Guid>
     /// </summary>
     public string? AdminCode { get; set; }
     
+    /// <summary>
+    /// For Player role: The admin this player is linked to via admin code during registration.
+    /// </summary>
+    public Guid? LinkedAdminId { get; set; }
+    
+    /// <summary>
+    /// Email verification token for player registration
+    /// </summary>
+    public string? EmailVerificationToken { get; set; }
+    
+    /// <summary>
+    /// Token expiry time
+    /// </summary>
+    public DateTime? EmailVerificationTokenExpiry { get; set; }
+    
     // Navigation properties
     public virtual ApplicationUser? CreatedBy { get; set; }
+    public virtual ApplicationUser? LinkedAdmin { get; set; }
     public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
     public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
     public virtual ICollection<PublicUser> PublicUsers { get; set; } = new List<PublicUser>();
+    public virtual ICollection<ApplicationUser> LinkedPlayers { get; set; } = new List<ApplicationUser>();
     
     public string FullName => $"{FirstName} {LastName}";
     
@@ -35,16 +52,29 @@ public class ApplicationUser : IdentityUser<Guid>
         var random = new Random();
         return new string(Enumerable.Range(0, 6).Select(_ => chars[random.Next(chars.Length)]).ToArray());
     }
+    
+    /// <summary>
+    /// Generate a random email verification token
+    /// </summary>
+    public static string GenerateVerificationToken()
+    {
+        return Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+            .Replace("+", "")
+            .Replace("/", "")
+            .Replace("=", "")
+            .Substring(0, 20);
+    }
 }
 
 public enum UserRole
 {
     SuperAdmin = 1,
-    Admin = 2
+    Admin = 2,
+    Player = 3
 }
 
 /// <summary>
-/// A public user who registers via an admin's code to play games
+/// A public user who registers via an admin's code to play games (anonymous/unregistered)
 /// </summary>
 public class PublicUser
 {

@@ -1,0 +1,93 @@
+@page "/player/leaderboard"
+@inject IAuthService AuthService
+@inject IGameService GameService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Leaderboard - InternsPlay</PageTitle>
+
+<div style="margin-bottom: 25px;">
+    <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">🏆 Leaderboard</h1>
+    <p style="color: #9ca3af; margin: 0;">Top players from your group</p>
+</div>
+
+@if (_isLoading)
+{
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">Loading...</div>
+}
+else if (_leaderboard.Any())
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #1a1a2e;">
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Rank</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Player</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Games</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Won</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Best Level</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Highest Prize</th>
+                    <th style="padding: 14px 20px; text-align: left; color: #9ca3af; font-size: 13px; border-bottom: 1px solid #2a3f5f;">Total Prize</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ var rank = 0; }
+                @foreach (var entry in _leaderboard)
+                {
+                    rank++;
+                    var isCurrentUser = entry.PlayerId == _currentUser?.Id;
+                    <tr style="border-bottom: 1px solid #2a3f5f; background: @(isCurrentUser ? "rgba(124, 58, 237, 0.1)" : "transparent");">
+                        <td style="padding: 12px 20px; font-size: 18px;">
+                            @if (rank == 1) { <span>🥇</span> }
+                            else if (rank == 2) { <span>🥈</span> }
+                            else if (rank == 3) { <span>🥉</span> }
+                            else { <span style="color: #6b7280;">@rank</span> }
+                        </td>
+                        <td style="padding: 12px 20px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 32px; height: 32px; background: @(isCurrentUser ? "#7c3aed" : "#3b82f6"); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
+                                    @(entry.PlayerName.Length > 0 ? entry.PlayerName[0] : '?')
+                                </div>
+                                <span style="color: @(isCurrentUser ? "#a855f7" : "white"); font-size: 14px; font-weight: @(isCurrentUser ? "700" : "400");">
+                                    @entry.PlayerName @(isCurrentUser ? "(You)" : "")
+                                </span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px 20px; color: #9ca3af; font-size: 14px;">@entry.TotalGames</td>
+                        <td style="padding: 12px 20px; color: #10b981; font-size: 14px;">@entry.GamesWon</td>
+                        <td style="padding: 12px 20px; color: white; font-size: 14px;">@entry.BestLevel / 15</td>
+                        <td style="padding: 12px 20px; color: #fbbf24; font-size: 14px; font-weight: 600;">@KBCPrizeStructure.FormatPrize(entry.HighestPrize)</td>
+                        <td style="padding: 12px 20px; color: #f59e0b; font-size: 14px;">@KBCPrizeStructure.FormatPrize(entry.TotalPrize)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 15px;">🏆</div>
+        <h3 style="color: #9ca3af; font-size: 20px; margin: 0 0 10px 0;">No games played yet</h3>
+        <p style="color: #6b7280; margin: 0 0 20px 0;">Be the first to play and top the leaderboard!</p>
+        <a href="/player/play" style="background: #7c3aed; color: white; text-decoration: none; padding: 12px 30px; border-radius: 8px;">🎮 Play Now</a>
+    </div>
+}
+
+@code {
+    private ApplicationUser? _currentUser;
+    private List<LeaderboardEntry> _leaderboard = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUser = await AuthService.GetCurrentUserAsync();
+        if (_currentUser == null || _currentUser.Role != UserRole.Player || !_currentUser.LinkedAdminId.HasValue)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+        
+        _leaderboard = await GameService.GetLeaderboardAsync(_currentUser.LinkedAdminId.Value);
+        _isLoading = false;
+    }
+}

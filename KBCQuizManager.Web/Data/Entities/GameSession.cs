@@ -37,9 +37,13 @@ public class GameSession
     // Total time taken in seconds
     public int TotalTimeTaken { get; set; } = 0;
     
-    // Owner (admin who created the game)
+    // Owner (admin who created the game / owns the questions)
     public Guid OwnerId { get; set; }
     public virtual ApplicationUser Owner { get; set; } = null!;
+    
+    // Player who played (null for admin-played or anonymous games)
+    public Guid? PlayerId { get; set; }
+    public virtual ApplicationUser? Player { get; set; }
     
     // Game answers
     public virtual ICollection<GameSessionAnswer> Answers { get; set; } = new List<GameSessionAnswer>();

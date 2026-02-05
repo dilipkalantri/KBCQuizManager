@@ -53,6 +53,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .WithOne(p => p.Admin)
                 .HasForeignKey(p => p.AdminId)
                 .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(u => u.LinkedAdmin)
+                .WithMany(u => u.LinkedPlayers)
+                .HasForeignKey(u => u.LinkedAdminId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
         
         builder.Entity<IdentityRole<Guid>>(entity => { entity.ToTable("Roles"); });
@@ -107,6 +112,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .WithMany()
                 .HasForeignKey(g => g.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(g => g.Player)
+                .WithMany()
+                .HasForeignKey(g => g.PlayerId)
+                .OnDelete(DeleteBehavior.SetNull);
                 
             entity.HasMany(g => g.Answers)
                 .WithOne(a => a.GameSession)
