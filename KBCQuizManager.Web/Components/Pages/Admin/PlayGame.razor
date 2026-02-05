@@ -81,16 +81,25 @@ else if (_gameSession != null)
     {
         <!-- Loading Screen -->
         <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 100px 20px;">
-            <div style="font-size: 60px; margin-bottom: 30px; animation: pulse 1.5s ease-in-out infinite;">🎯</div>
+            <div style="font-size: 60px; margin-bottom: 30px;">🎯</div>
             <h2 style="color: white; margin: 0 0 15px 0;">Loading Question...</h2>
-            <p style="color: #9ca3af; margin: 0;">Level @_gameSession.CurrentLevel</p>
-            <div style="margin-top: 30px;">
-                <div style="width: 50px; height: 50px; border: 4px solid #2a3f5f; border-top-color: #7c3aed; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite;"></div>
-            </div>
+            <p style="color: #9ca3af; margin: 0 0 30px 0;">Level @_gameSession.CurrentLevel</p>
+            <div class="kbc-spinner"></div>
         </div>
         <style>
-            @@keyframes spin { to { transform: rotate(360deg); } }
-            @@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+            .kbc-spinner {
+                width: 50px;
+                height: 50px;
+                border: 4px solid #2a3f5f;
+                border-top: 4px solid #7c3aed;
+                border-radius: 50%;
+                margin: 0 auto;
+                animation: kbc-spin 1s linear infinite;
+            }
+            @@keyframes kbc-spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
         </style>
     }
     else
@@ -153,20 +162,20 @@ else if (_gameSession != null)
                     <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
                         <p style="color: #9ca3af; font-size: 12px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Lifelines</p>
                         <div style="display: flex; gap: 10px;">
-                            <button @onclick="UseFiftyFifty" disabled="@(_gameSession.FiftyFiftyUsed || _showAnswer)" 
-                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.FiftyFiftyUsed ? "#4b5563" : "#f59e0b"); background: @(_gameSession.FiftyFiftyUsed ? "#1a1a2e" : "rgba(245, 158, 11, 0.1)"); color: @(_gameSession.FiftyFiftyUsed ? "#4b5563" : "#f59e0b"); opacity: @(_gameSession.FiftyFiftyUsed ? "0.5" : "1");">
+                            <button @onclick="UseFiftyFifty" disabled="@(_localFiftyFiftyUsed || _showAnswer)" 
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_localFiftyFiftyUsed ? "#4b5563" : "#f59e0b"); background: @(_localFiftyFiftyUsed ? "#1a1a2e" : "rgba(245, 158, 11, 0.1)"); color: @(_localFiftyFiftyUsed ? "#4b5563" : "#f59e0b"); opacity: @(_localFiftyFiftyUsed ? "0.5" : "1");">
                                 50:50
                             </button>
-                            <button @onclick="UsePhoneAFriend" disabled="@(_gameSession.PhoneAFriendUsed || _showAnswer)"
-                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.PhoneAFriendUsed ? "#4b5563" : "#3b82f6"); background: @(_gameSession.PhoneAFriendUsed ? "#1a1a2e" : "rgba(59, 130, 246, 0.1)"); color: @(_gameSession.PhoneAFriendUsed ? "#4b5563" : "#3b82f6"); opacity: @(_gameSession.PhoneAFriendUsed ? "0.5" : "1");">
+                            <button @onclick="UsePhoneAFriend" disabled="@(_localPhoneAFriendUsed || _showAnswer)"
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_localPhoneAFriendUsed ? "#4b5563" : "#3b82f6"); background: @(_localPhoneAFriendUsed ? "#1a1a2e" : "rgba(59, 130, 246, 0.1)"); color: @(_localPhoneAFriendUsed ? "#4b5563" : "#3b82f6"); opacity: @(_localPhoneAFriendUsed ? "0.5" : "1");">
                                 📞 Phone
                             </button>
-                            <button @onclick="UseAudiencePoll" disabled="@(_gameSession.AudiencePollUsed || _showAnswer)"
-                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.AudiencePollUsed ? "#4b5563" : "#10b981"); background: @(_gameSession.AudiencePollUsed ? "#1a1a2e" : "rgba(16, 185, 129, 0.1)"); color: @(_gameSession.AudiencePollUsed ? "#4b5563" : "#10b981"); opacity: @(_gameSession.AudiencePollUsed ? "0.5" : "1");">
+                            <button @onclick="UseAudiencePoll" disabled="@(_localAudiencePollUsed || _showAnswer)"
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_localAudiencePollUsed ? "#4b5563" : "#10b981"); background: @(_localAudiencePollUsed ? "#1a1a2e" : "rgba(16, 185, 129, 0.1)"); color: @(_localAudiencePollUsed ? "#4b5563" : "#10b981"); opacity: @(_localAudiencePollUsed ? "0.5" : "1");">
                                 👥 Audience
                             </button>
-                            <button @onclick="UseExpertAdvice" disabled="@(_gameSession.ExpertAdviceUsed || _showAnswer)"
-                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_gameSession.ExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); background: @(_gameSession.ExpertAdviceUsed ? "#1a1a2e" : "rgba(139, 92, 246, 0.1)"); color: @(_gameSession.ExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); opacity: @(_gameSession.ExpertAdviceUsed ? "0.5" : "1");">
+                            <button @onclick="UseExpertAdvice" disabled="@(_localExpertAdviceUsed || _showAnswer)"
+                                    style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid @(_localExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); background: @(_localExpertAdviceUsed ? "#1a1a2e" : "rgba(139, 92, 246, 0.1)"); color: @(_localExpertAdviceUsed ? "#4b5563" : "#8b5cf6"); opacity: @(_localExpertAdviceUsed ? "0.5" : "1");">
                                 🎓 Expert
                             </button>
                         </div>
@@ -263,16 +272,25 @@ else if (_isPlaying)
 {
     <!-- Loading Screen when _gameSession is null -->
     <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 100px 20px;">
-        <div style="font-size: 60px; margin-bottom: 30px; animation: pulse 1.5s ease-in-out infinite;">🎮</div>
+        <div style="font-size: 60px; margin-bottom: 30px;">🎮</div>
         <h2 style="color: white; margin: 0 0 15px 0;">Starting Game...</h2>
-        <p style="color: #9ca3af; margin: 0;">@_playerName</p>
-        <div style="margin-top: 30px;">
-            <div style="width: 50px; height: 50px; border: 4px solid #2a3f5f; border-top-color: #7c3aed; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite;"></div>
-        </div>
+        <p style="color: #9ca3af; margin: 0 0 30px 0;">@_playerName</p>
+        <div class="kbc-spinner2"></div>
     </div>
     <style>
-        @@keyframes spin { to { transform: rotate(360deg); } }
-        @@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .kbc-spinner2 {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #2a3f5f;
+            border-top: 4px solid #7c3aed;
+            border-radius: 50%;
+            margin: 0 auto;
+            animation: kbc-spin2 1s linear infinite;
+        }
+        @@keyframes kbc-spin2 {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 }
 
@@ -299,11 +317,17 @@ else if (_isPlaying)
     private System.Threading.Timer? _timer;
     private int _timeTaken = 0;
     
-    // Lifelines
+    // Lifelines - Local tracking to avoid EF Core conflicts
     private List<CorrectOption> _hiddenOptions = new();
     private string _lifelineResult = "";
     private AudiencePollResult? _audiencePoll;
     private LifelineUsage _currentLifelineUsage = new();
+    
+    // Local lifeline used flags (separate from _gameSession to avoid EF tracking issues)
+    private bool _localFiftyFiftyUsed = false;
+    private bool _localPhoneAFriendUsed = false;
+    private bool _localAudiencePollUsed = false;
+    private bool _localExpertAdviceUsed = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -323,6 +347,12 @@ else if (_isPlaying)
         _usedQuestionIds.Clear();
         _isPlaying = true;
         _gameFinished = false;
+        
+        // Reset local lifeline tracking
+        _localFiftyFiftyUsed = false;
+        _localPhoneAFriendUsed = false;
+        _localAudiencePollUsed = false;
+        _localExpertAdviceUsed = false;
         
         await LoadQuestion();
     }
@@ -511,88 +541,90 @@ else if (_isPlaying)
         _gameSession = null;
         _currentQuestion = null;
         _usedQuestionIds.Clear();
+        
+        // Reset local lifeline flags
+        _localFiftyFiftyUsed = false;
+        _localPhoneAFriendUsed = false;
+        _localAudiencePollUsed = false;
+        _localExpertAdviceUsed = false;
     }
 
     // Lifelines
     private async Task UseFiftyFifty()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.FiftyFiftyUsed || _showAnswer) return;
+        if (_gameSession == null || _currentQuestion == null || _localFiftyFiftyUsed || _showAnswer) return;
         
         try
         {
+            _localFiftyFiftyUsed = true; // Update locally to prevent double-click
             var (removed, _) = await GameService.GetFiftyFiftyOptionsAsync(_currentQuestion);
             _hiddenOptions = removed;
-            _gameSession.FiftyFiftyUsed = true; // Update locally to prevent double-click
             _currentLifelineUsage.FiftyFifty = true;
             
-            // Update in database (fire and forget to avoid blocking UI)
-            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.FiftyFifty);
-            
+            // Lifeline usage will be saved when answer is recorded
             StateHasChanged();
         }
         catch (Exception ex)
         {
+            _localFiftyFiftyUsed = false; // Reset on error
             Snackbar.Add($"Error using 50:50: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task UsePhoneAFriend()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.PhoneAFriendUsed || _showAnswer) return;
+        if (_gameSession == null || _currentQuestion == null || _localPhoneAFriendUsed || _showAnswer) return;
         
         try
         {
+            _localPhoneAFriendUsed = true; // Update locally
             _lifelineResult = await GameService.GetPhoneAFriendHintAsync(_currentQuestion);
-            _gameSession.PhoneAFriendUsed = true; // Update locally
             _currentLifelineUsage.PhoneAFriend = true;
-            
-            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.PhoneAFriend);
             
             StateHasChanged();
         }
         catch (Exception ex)
         {
+            _localPhoneAFriendUsed = false; // Reset on error
             Snackbar.Add($"Error using Phone a Friend: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task UseAudiencePoll()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.AudiencePollUsed || _showAnswer) return;
+        if (_gameSession == null || _currentQuestion == null || _localAudiencePollUsed || _showAnswer) return;
         
         try
         {
+            _localAudiencePollUsed = true; // Update locally
             _audiencePoll = await GameService.GetAudiencePollAsync(_currentQuestion);
-            _gameSession.AudiencePollUsed = true; // Update locally
             _currentLifelineUsage.AudiencePoll = true;
-            
-            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.AudiencePoll);
             
             StateHasChanged();
         }
         catch (Exception ex)
         {
+            _localAudiencePollUsed = false; // Reset on error
             Snackbar.Add($"Error using Audience Poll: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task UseExpertAdvice()
     {
-        if (_gameSession == null || _currentQuestion == null || _gameSession.ExpertAdviceUsed || _showAnswer) return;
+        if (_gameSession == null || _currentQuestion == null || _localExpertAdviceUsed || _showAnswer) return;
         
         try
         {
+            _localExpertAdviceUsed = true; // Update locally
             var (answer, confidence) = await GameService.GetExpertAdviceAsync(_currentQuestion);
             _lifelineResult = $"🎓 Expert says: \"I'm {confidence}% confident the answer is Option {answer}\"";
-            _gameSession.ExpertAdviceUsed = true; // Update locally
             _currentLifelineUsage.ExpertAdvice = true;
-            
-            _ = GameService.UseLifelineAsync(_gameSession.Id, LifelineType.ExpertAdvice);
             
             StateHasChanged();
         }
         catch (Exception ex)
         {
+            _localExpertAdviceUsed = false; // Reset on error
             Snackbar.Add($"Error using Expert Advice: {ex.Message}", Severity.Error);
         }
     }

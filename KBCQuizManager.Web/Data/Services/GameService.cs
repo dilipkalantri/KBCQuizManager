@@ -32,6 +32,9 @@ public class GameService : IGameService
 
     public async Task<GameSession> StartNewGameAsync(string playerName, Guid ownerId)
     {
+        // Clear any existing tracked entities
+        _context.ChangeTracker.Clear();
+        
         var session = new GameSession
         {
             PlayerName = playerName,
@@ -42,12 +45,17 @@ public class GameService : IGameService
 
         _context.GameSessions.Add(session);
         await _context.SaveChangesAsync();
+        
+        // Detach to prevent tracking issues
+        _context.Entry(session).State = EntityState.Detached;
+        
         return session;
     }
 
     public async Task<Question?> GetQuestionForLevelAsync(int level, Guid ownerId, List<Guid> usedQuestionIds)
     {
         var query = _context.Questions
+            .AsNoTracking()
             .Where(q => q.OwnerId == ownerId && q.IsActive && q.Level == level);
 
         if (usedQuestionIds.Any())
@@ -81,20 +89,24 @@ public class GameService : IGameService
 
     public async Task<GameSession> RecordAnswerAsync(Guid sessionId, Guid questionId, CorrectOption? answer, int timeTaken, bool timedOut, LifelineUsage? lifelineUsed)
     {
-        var session = await _context.GameSessions
-            .Include(g => g.Answers)
-            .FirstOrDefaultAsync(g => g.Id == sessionId);
+        // Clear change tracker to avoid concurrency issues
+        _context.ChangeTracker.Clear();
+        
+        // Reload session fresh from database (without Include to avoid tracking issues)
+        var session = await _context.GameSessions.FirstOrDefaultAsync(g => g.Id == sessionId);
         
         if (session == null) throw new Exception("Game session not found");
 
-        var question = await _context.Questions.FindAsync(questionId);
+        var question = await _context.Questions.AsNoTracking().FirstOrDefaultAsync(q => q.Id == questionId);
         if (question == null) throw new Exception("Question not found");
 
         var isCorrect = !timedOut && answer.HasValue && answer.Value == question.CorrectAnswer;
         var prizeWon = isCorrect ? question.GetPrizeAmount() : 0;
 
+        // Create the answer as a separate entity
         var sessionAnswer = new GameSessionAnswer
         {
+            Id = Guid.NewGuid(),
             GameSessionId = sessionId,
             QuestionId = questionId,
             Level = session.CurrentLevel,
@@ -103,13 +115,17 @@ public class GameService : IGameService
             TimeTaken = timeTaken,
             TimedOut = timedOut,
             PrizeWon = prizeWon,
+            AnsweredAt = DateTime.UtcNow,
             UsedFiftyFifty = lifelineUsed?.FiftyFifty ?? false,
             UsedPhoneAFriend = lifelineUsed?.PhoneAFriend ?? false,
             UsedAudiencePoll = lifelineUsed?.AudiencePoll ?? false,
             UsedExpertAdvice = lifelineUsed?.ExpertAdvice ?? false
         };
 
-        session.Answers.Add(sessionAnswer);
+        // Add answer directly to the DbSet instead of through navigation property
+        _context.GameSessionAnswers.Add(sessionAnswer);
+        
+        // Update session
         session.QuestionsAnswered++;
         session.TotalTimeTaken += timeTaken;
 
@@ -146,7 +162,10 @@ public class GameService : IGameService
 
     public async Task<GameSession> UseLifelineAsync(Guid sessionId, LifelineType lifeline)
     {
-        var session = await _context.GameSessions.FindAsync(sessionId);
+        // Clear change tracker to avoid concurrency issues
+        _context.ChangeTracker.Clear();
+        
+        var session = await _context.GameSessions.FirstOrDefaultAsync(g => g.Id == sessionId);
         if (session == null) throw new Exception("Game session not found");
 
         switch (lifeline)
@@ -171,7 +190,10 @@ public class GameService : IGameService
 
     public async Task<GameSession> QuitGameAsync(Guid sessionId)
     {
-        var session = await _context.GameSessions.FindAsync(sessionId);
+        // Clear change tracker to avoid conflicts
+        _context.ChangeTracker.Clear();
+        
+        var session = await _context.GameSessions.FirstOrDefaultAsync(g => g.Id == sessionId);
         if (session == null) throw new Exception("Game session not found");
 
         session.Status = GameStatus.Quit;
