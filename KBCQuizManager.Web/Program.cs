@@ -80,6 +80,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddHttpContextAccessor();
 
 // Register application services
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();

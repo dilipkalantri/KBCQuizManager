@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 using KBCQuizManager.Web.Data.Entities;
 
 namespace KBCQuizManager.Web.Data.Services;
@@ -25,17 +27,34 @@ public class AuthService : IAuthService
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ApplicationDbContext _context;
+    private readonly IEmailService _emailService;
     
     public AuthService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IHttpContextAccessor httpContextAccessor,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IEmailService emailService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _httpContextAccessor = httpContextAccessor;
         _context = context;
+        _emailService = emailService;
+    }
+    
+    private string GetBaseUrl()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request == null)
+        {
+            // Fallback if HttpContext is not available (shouldn't happen in normal scenarios)
+            return "https://localhost:5001";
+        }
+        
+        var scheme = request.Scheme;
+        var host = request.Host.ToUriComponent();
+        return $"{scheme}://{host}";
     }
     
     public async Task<(bool Success, string Message)> LoginAsync(string email, string password)
@@ -146,7 +165,19 @@ public class AuthService : IAuthService
         
         if (result.Succeeded)
         {
-            return (true, "Registration successful! Please verify your email to login.", verificationToken);
+            // Generate verification URL dynamically from current request
+            var baseUrl = GetBaseUrl();
+            var verificationUrl = $"{baseUrl}/account/verify-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(verificationToken)}";
+            
+            // Send verification email
+            var emailSent = await _emailService.SendVerificationEmailAsync(email, firstName, verificationUrl);
+            if (!emailSent)
+            {
+                // Log warning but don't fail registration
+                // The token is still returned so user can verify manually if needed
+            }
+            
+            return (true, "Registration successful! Please check your email to verify your account.", verificationToken);
         }
         
         var errors = string.Join(", ", result.Errors.Select(e => e.Description));
@@ -194,7 +225,19 @@ public class AuthService : IAuthService
         
         await _userManager.UpdateAsync(user);
         
-        // In production, send email here. For now, token is returned via the page.
-        return (true, $"Verification link has been regenerated. Token: {verificationToken}");
+        // Generate verification URL dynamically from current request
+        var baseUrl = GetBaseUrl();
+        var verificationUrl = $"{baseUrl}/account/verify-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(verificationToken)}";
+        
+        // Send verification email
+        var emailSent = await _emailService.SendVerificationEmailAsync(email, user.FirstName, verificationUrl);
+        if (emailSent)
+        {
+            return (true, "Verification email has been sent. Please check your inbox.");
+        }
+        else
+        {
+            return (true, $"Verification link has been regenerated. Please use this token: {verificationToken}");
+        }
     }
 }

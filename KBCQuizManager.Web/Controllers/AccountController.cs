@@ -120,10 +120,9 @@ public class AccountController : Controller
 
             if (success)
             {
-                // In a production environment, you'd send this via email
-                // For now, redirect to verification page with the token
-                var verifyUrl = $"/verify-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token!)}";
-                return Redirect(verifyUrl);
+                // Email verification link has been sent via email
+                // Redirect to a page informing the user to check their email
+                return Redirect($"/verify-email?email={Uri.EscapeDataString(email)}&sent=true");
             }
 
             return Redirect($"/register?error={Uri.EscapeDataString(message)}&firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}&email={Uri.EscapeDataString(email)}&adminCode={Uri.EscapeDataString(adminCode)}");
