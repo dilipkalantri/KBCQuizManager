@@ -36,6 +36,9 @@ public class DatabaseInitializer : IDatabaseInitializer
             await _context.Database.EnsureCreatedAsync();
             _logger.LogInformation("Database created/verified successfully");
             
+            // Auto-migrate: Add IsHost column if missing
+            await RunMigrationsAsync();
+            
             // Check if SuperAdmin exists
             var superAdminExists = await _context.Users
                 .AnyAsync(u => u.Role == UserRole.SuperAdmin);
@@ -85,6 +88,32 @@ public class DatabaseInitializer : IDatabaseInitializer
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
             _logger.LogError("Failed to create SuperAdmin: {Errors}", errors);
             throw new Exception($"Failed to create SuperAdmin: {errors}");
+        }
+    }
+    
+    private async Task RunMigrationsAsync()
+    {
+        try
+        {
+            // Check if IsHost column exists on MultiplayerPlayers table
+            var conn = _context.Database.GetDbConnection();
+            await conn.OpenAsync();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"SELECT column_name FROM information_schema.columns 
+                                WHERE table_name = 'MultiplayerPlayers' AND column_name = 'IsHost'";
+            var result = await cmd.ExecuteScalarAsync();
+            if (result == null)
+            {
+                _logger.LogInformation("Adding IsHost column to MultiplayerPlayers table...");
+                using var alterCmd = conn.CreateCommand();
+                alterCmd.CommandText = @"ALTER TABLE ""MultiplayerPlayers"" ADD COLUMN ""IsHost"" boolean NOT NULL DEFAULT false";
+                await alterCmd.ExecuteNonQueryAsync();
+                _logger.LogInformation("IsHost column added successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Migration check failed (table may not exist yet, which is fine)");
         }
     }
 }

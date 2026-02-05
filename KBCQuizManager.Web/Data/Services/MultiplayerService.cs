@@ -28,26 +28,19 @@ public class MultiplayerService : IMultiplayerService
 
     public async Task<MultiplayerGame> CreateGameAsync(Guid hostId, string gameName, int maxPlayers, int timePerQuestion)
     {
-        // Generate unique room code
         string roomCode;
-        do
-        {
-            roomCode = MultiplayerGame.GenerateRoomCode();
-        } while (await _context.MultiplayerGames.AnyAsync(g => g.RoomCode == roomCode));
+        do { roomCode = MultiplayerGame.GenerateRoomCode(); }
+        while (await _context.MultiplayerGames.AnyAsync(g => g.RoomCode == roomCode));
 
         var game = new MultiplayerGame
         {
-            RoomCode = roomCode,
-            GameName = gameName,
-            HostId = hostId,
-            MaxPlayers = maxPlayers,
-            TimePerQuestion = timePerQuestion,
-            TotalQuestions = 15
+            RoomCode = roomCode, GameName = gameName,
+            HostId = hostId, MaxPlayers = maxPlayers,
+            TimePerQuestion = timePerQuestion, TotalQuestions = 15
         };
 
         _context.MultiplayerGames.Add(game);
         await _context.SaveChangesAsync();
-
         return game;
     }
 
@@ -57,15 +50,10 @@ public class MultiplayerService : IMultiplayerService
         {
             _context.ChangeTracker.Clear();
             return await _context.MultiplayerGames
-                .Include(g => g.Players)
-                .Include(g => g.Host)
+                .Include(g => g.Players).Include(g => g.Host)
                 .FirstOrDefaultAsync(g => g.RoomCode == roomCode.ToUpper());
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting game by room code");
-            return null;
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error getting game by room code"); return null; }
     }
 
     public async Task<MultiplayerGame?> GetGameByIdAsync(Guid gameId)
@@ -74,15 +62,10 @@ public class MultiplayerService : IMultiplayerService
         {
             _context.ChangeTracker.Clear();
             return await _context.MultiplayerGames
-                .Include(g => g.Players)
-                .Include(g => g.Host)
+                .Include(g => g.Players).Include(g => g.Host)
                 .FirstOrDefaultAsync(g => g.Id == gameId);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting game by ID");
-            return null;
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error getting game by ID"); return null; }
     }
 
     public async Task<List<MultiplayerGame>> GetHostGamesAsync(Guid hostId)
@@ -93,12 +76,11 @@ public class MultiplayerService : IMultiplayerService
                 .Where(g => g.HostId == hostId)
                 .OrderByDescending(g => g.CreatedAt)
                 .Include(g => g.Players)
-                .Take(20)
-                .ToListAsync();
+                .Take(20).ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting host games. Make sure you've run the SQL script to create multiplayer tables.");
+            _logger.LogError(ex, "Error getting host games");
             return new List<MultiplayerGame>();
         }
     }
@@ -109,15 +91,10 @@ public class MultiplayerService : IMultiplayerService
         {
             return await _context.MultiplayerPlayers
                 .Where(p => p.GameId == gameId)
-                .OrderByDescending(p => p.TotalPoints)
-                .ThenBy(p => p.TotalTimeTaken)
+                .OrderByDescending(p => p.TotalPoints).ThenBy(p => p.TotalTimeTaken)
                 .ToListAsync();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting players");
-            return new List<MultiplayerPlayer>();
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error getting players"); return new(); }
     }
 
     public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(Guid gameId)
@@ -126,8 +103,7 @@ public class MultiplayerService : IMultiplayerService
         {
             var players = await _context.MultiplayerPlayers
                 .Where(p => p.GameId == gameId)
-                .OrderByDescending(p => p.TotalPoints)
-                .ThenBy(p => p.TotalTimeTaken)
+                .OrderByDescending(p => p.TotalPoints).ThenBy(p => p.TotalTimeTaken)
                 .ToListAsync();
 
             return players.Select((p, index) => new LeaderboardEntry
@@ -138,17 +114,14 @@ public class MultiplayerService : IMultiplayerService
                 TotalPoints = p.TotalPoints,
                 CorrectAnswers = p.CorrectAnswers,
                 WrongAnswers = p.WrongAnswers,
+                TotalTimeTaken = p.TotalTimeTaken,
                 AverageTime = (p.CorrectAnswers + p.WrongAnswers) > 0 
-                    ? p.TotalTimeTaken / (p.CorrectAnswers + p.WrongAnswers) 
-                    : 0,
-                IsConnected = p.IsConnected
+                    ? p.TotalTimeTaken / (p.CorrectAnswers + p.WrongAnswers) : 0,
+                IsConnected = p.IsConnected,
+                IsHost = p.IsHost
             }).ToList();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting leaderboard");
-            return new List<LeaderboardEntry>();
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error getting leaderboard"); return new(); }
     }
 
     public async Task DeleteGameAsync(Guid gameId)
@@ -156,16 +129,9 @@ public class MultiplayerService : IMultiplayerService
         try
         {
             var game = await _context.MultiplayerGames.FindAsync(gameId);
-            if (game != null)
-            {
-                _context.MultiplayerGames.Remove(game);
-                await _context.SaveChangesAsync();
-            }
+            if (game != null) { _context.MultiplayerGames.Remove(game); await _context.SaveChangesAsync(); }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting game");
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error deleting game"); }
     }
 
     public async Task<bool> HasQuestionsForAllLevelsAsync(Guid hostId, int levels)
@@ -174,17 +140,12 @@ public class MultiplayerService : IMultiplayerService
         {
             for (int i = 1; i <= levels; i++)
             {
-                var count = await _context.Questions
-                    .CountAsync(q => q.OwnerId == hostId && q.IsActive && q.Level == i);
+                var count = await _context.Questions.CountAsync(q => q.OwnerId == hostId && q.IsActive && q.Level == i);
                 if (count == 0) return false;
             }
             return true;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking questions");
-            return false;
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error checking questions"); return false; }
     }
 }
 
@@ -196,6 +157,8 @@ public class LeaderboardEntry
     public int TotalPoints { get; set; }
     public int CorrectAnswers { get; set; }
     public int WrongAnswers { get; set; }
+    public int TotalTimeTaken { get; set; }
     public int AverageTime { get; set; }
     public bool IsConnected { get; set; }
+    public bool IsHost { get; set; }
 }

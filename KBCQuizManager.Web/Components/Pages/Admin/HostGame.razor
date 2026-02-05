@@ -10,22 +10,12 @@
 
 <PageTitle>Host Multiplayer Game - KBC Quiz</PageTitle>
 
-<!-- Sound Elements -->
-<audio id="soundCorrect" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundWrong" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundTick" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundQuestion" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundWin" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" type="audio/mpeg">
-</audio>
+<audio id="soundCorrect" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundWrong" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundTick" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundQuestion" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundWin" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundLifeline" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3" type="audio/mpeg"></audio>
 
 @if (_currentUser == null)
 {
@@ -35,88 +25,59 @@ else if (_currentGame == null)
 {
     <!-- Create Game Screen -->
     <div style="max-width: 700px; margin: 0 auto;">
-        <h1 style="color: white; margin: 0 0 10px 0; font-size: 28px;">🎮 Host Multiplayer Game</h1>
-        <p style="color: #9ca3af; margin: 0 0 30px 0;">Create a room and invite players to join!</p>
+        <h1 style="color: white; margin: 0 0 10px 0; font-size: 24px;">🎮 Host Multiplayer Game</h1>
+        <p style="color: #9ca3af; margin: 0 0 25px 0;">Create a room and invite players to join!</p>
         
-        <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px; margin-bottom: 20px;">
+        <div class="card" style="margin-bottom: 20px; padding: 25px;">
             <h3 style="color: white; margin: 0 0 20px 0;">Game Settings</h3>
-            
             <div style="margin-bottom: 20px;">
                 <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Game Name</label>
-                <input @bind="_gameName" placeholder="e.g., Class 10 Math Quiz" 
-                       style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 16px;" />
+                <input @bind="_gameName" placeholder="e.g., Class 10 Math Quiz" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 16px;" />
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="settings-grid" style="margin-bottom: 20px;">
                 <div>
                     <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Max Players</label>
-                    <select @bind="_maxPlayers" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 16px;">
-                        <option value="10">10 Players</option>
-                        <option value="20">20 Players</option>
-                        <option value="30">30 Players</option>
-                        <option value="50">50 Players</option>
+                    <select @bind="_maxPlayers" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white;">
+                        @foreach (var n in new[] { 10, 20, 30, 50 }) { <option value="@n">@n Players</option> }
                     </select>
                 </div>
                 <div>
                     <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Time per Question</label>
-                    <select @bind="_timePerQuestion" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white; font-size: 16px;">
-                        <option value="15">15 seconds</option>
-                        <option value="20">20 seconds</option>
-                        <option value="30">30 seconds</option>
-                        <option value="45">45 seconds</option>
-                        <option value="60">60 seconds</option>
+                    <select @bind="_timePerQuestion" style="width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 8px; color: white;">
+                        @foreach (var t in new[] { 15, 20, 30, 45, 60 }) { <option value="@t">@t seconds</option> }
                     </select>
                 </div>
             </div>
-            
-            <!-- Question availability check -->
             <div style="margin-bottom: 20px;">
                 <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Question Availability (15 Levels)</label>
                 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                    @for (int i = 1; i <= 15; i++)
-                    {
-                        var level = i;
-                        var count = _levelCounts.GetValueOrDefault(level, 0);
-                        <span style="padding: 5px 10px; border-radius: 6px; font-size: 11px; background: @(count > 0 ? "#10b981" : "#ef4444"); color: white;">
-                            L@(level): @count
-                        </span>
-                    }
+                    @for (int i = 1; i <= 15; i++) { var lv = i; var c = _levelCounts.GetValueOrDefault(lv, 0);
+                        <span style="padding: 4px 8px; border-radius: 6px; font-size: 11px; background: @(c > 0 ? "#10b981" : "#ef4444"); color: white;">L@(lv): @c</span> }
                 </div>
-                @if (_missingLevels.Any())
-                {
-                    <p style="color: #ef4444; font-size: 13px; margin: 10px 0 0 0;">⚠️ Missing questions for levels: @string.Join(", ", _missingLevels)</p>
-                }
+                @if (_missingLevels.Any()) { <p style="color: #ef4444; font-size: 13px; margin: 8px 0 0;">⚠️ Missing: @string.Join(", ", _missingLevels)</p> }
             </div>
-            
             <button @onclick="CreateGame" disabled="@(string.IsNullOrWhiteSpace(_gameName) || _missingLevels.Any() || _isCreating)"
-                    style="width: 100%; padding: 15px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; opacity: @(string.IsNullOrWhiteSpace(_gameName) || _missingLevels.Any() || _isCreating ? "0.5" : "1");">
+                    style="width: 100%; padding: 14px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; opacity: @(string.IsNullOrWhiteSpace(_gameName) || _missingLevels.Any() || _isCreating ? "0.5" : "1");">
                 @(_isCreating ? "Creating..." : "🎮 Create Game Room")
             </button>
         </div>
         
-        <!-- Previous Games -->
         @if (_previousGames.Any())
         {
-            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px;">
+            <div class="card" style="padding: 25px;">
                 <h3 style="color: white; margin: 0 0 15px 0;">Recent Games</h3>
                 @foreach (var game in _previousGames.Take(5))
                 {
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #1a1a2e; border-radius: 8px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #1a1a2e; border-radius: 8px; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
                         <div>
                             <span style="color: white; font-weight: 600;">@game.GameName</span>
-                            <span style="color: #6b7280; font-size: 12px; margin-left: 10px;">@game.RoomCode</span>
-                            <span style="color: #6b7280; font-size: 12px; margin-left: 10px;">@game.Players.Count players</span>
+                            <span style="color: #6b7280; font-size: 12px; margin-left: 8px;">@game.RoomCode</span>
+                            <span style="color: #6b7280; font-size: 12px; margin-left: 8px;">@game.Players.Count players</span>
                         </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <span style="padding: 4px 10px; border-radius: 12px; font-size: 11px; background: @GetStatusColor(game.Status); color: white;">
-                                @game.Status
-                            </span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span style="padding: 3px 10px; border-radius: 12px; font-size: 11px; background: @GetStatusColor(game.Status); color: white;">@game.Status</span>
                             @if (game.Status == MultiplayerGameStatus.Waiting)
-                            {
-                                <button @onclick="() => ResumeGame(game.Id)" style="padding: 6px 12px; background: #7c3aed; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
-                                    Resume
-                                </button>
-                            }
+                            { <button @onclick="() => ResumeGame(game.Id)" style="padding: 5px 10px; background: #7c3aed; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">Resume</button> }
                         </div>
                     </div>
                 }
@@ -127,233 +88,240 @@ else if (_currentGame == null)
 else
 {
     <!-- Game Host Control Panel -->
-    <div style="max-width: 1200px; margin: 0 auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="game-container-wide">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <div>
-                <h1 style="color: white; margin: 0; font-size: 24px;">@_currentGame.GameName</h1>
-                <p style="color: #9ca3af; margin: 5px 0 0 0;">Room Code: <span style="color: #7c3aed; font-weight: 700; font-size: 24px; letter-spacing: 3px;">@_currentGame.RoomCode</span></p>
+                <h1 style="color: white; margin: 0; font-size: 22px;">@_currentGame.GameName</h1>
+                <p style="color: #9ca3af; margin: 4px 0 0;">Room: <span style="color: #7c3aed; font-weight: 700; font-size: 22px; letter-spacing: 3px;">@_currentGame.RoomCode</span></p>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <span style="padding: 8px 16px; border-radius: 20px; font-size: 14px; background: @GetStatusColor(_currentGame.Status); color: white;">
-                    @_currentGame.Status
-                </span>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <span style="padding: 6px 14px; border-radius: 20px; font-size: 13px; background: @GetStatusColor(_currentGame.Status); color: white;">@_currentGame.Status</span>
                 @if (_currentGame.Status == MultiplayerGameStatus.Waiting)
-                {
-                    <button @onclick="CopyJoinLink" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        📋 Copy Join Link
-                    </button>
-                }
+                { <button @onclick="CopyJoinLink" style="padding: 6px 14px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;">📋 Copy Link</button> }
             </div>
         </div>
         
-        <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
+        <div class="host-grid">
             <!-- Main Game Area -->
             <div>
                 @if (_currentGame.Status == MultiplayerGameStatus.Waiting)
                 {
-                    <!-- Waiting for players -->
-                    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 40px; text-align: center;">
-                        <div style="font-size: 80px; margin-bottom: 20px;">👥</div>
-                        <h2 style="color: white; margin: 0 0 10px 0;">Waiting for Players</h2>
-                        <p style="color: #9ca3af; margin: 0 0 20px 0;">Share the room code or join link with players</p>
-                        
-                        <div style="background: #1a1a2e; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-                            <p style="color: #6b7280; margin: 0 0 10px 0; font-size: 14px;">Join Link:</p>
-                            <code style="color: #7c3aed; font-size: 14px; word-break: break-all;">@GetJoinLink()</code>
+                    <div class="card" style="padding: 35px; text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 15px;">👥</div>
+                        <h2 style="color: white; margin: 0 0 8px;">Waiting for Players</h2>
+                        <p style="color: #9ca3af; margin: 0 0 20px;">Share the room code or join link</p>
+                        <div style="background: #1a1a2e; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                            <p style="color: #6b7280; margin: 0 0 8px; font-size: 13px;">Join Link:</p>
+                            <code style="color: #7c3aed; font-size: 13px; word-break: break-all;">@GetJoinLink()</code>
                         </div>
-                        
-                        <button @onclick="StartGame" disabled="@(_players.Count < 1)"
-                                style="padding: 15px 40px; background: #10b981; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer; opacity: @(_players.Count < 1 ? "0.5" : "1");">
-                            ▶️ Start Game (@_players.Count players)
+                        <button @onclick="StartGame" disabled="@(_players.Count(p => !p.IsHost) < 1)"
+                                style="padding: 14px 35px; background: #10b981; color: white; border: none; border-radius: 10px; font-size: 17px; font-weight: 600; cursor: pointer; opacity: @(_players.Count(p => !p.IsHost) < 1 ? "0.5" : "1");">
+                            ▶️ Start Game (@_players.Count(p => !p.IsHost) players)
                         </button>
                     </div>
                 }
                 else if (_currentGame.Status == MultiplayerGameStatus.Starting)
                 {
-                    <!-- Countdown -->
-                    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 60px; text-align: center;">
-                        <h2 style="color: white; margin: 0 0 20px 0;">Game Starting In...</h2>
-                        <div style="font-size: 120px; color: #7c3aed; font-weight: 700;">@_countdown</div>
+                    <div class="card" style="padding: 50px; text-align: center;">
+                        <h2 style="color: white; margin: 0 0 15px;">Game Starting In...</h2>
+                        <div style="font-size: 100px; color: #7c3aed; font-weight: 700;">@_countdown</div>
                     </div>
                 }
                 else if (_currentGame.Status == MultiplayerGameStatus.ShowingQuestion && _currentQuestion != null)
                 {
-                    <!-- Question Display -->
-                    <div style="background: linear-gradient(180deg, #0f172a, #1e293b); border: 2px solid #7c3aed; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                            <span style="background: #7c3aed; color: white; padding: 6px 14px; border-radius: 15px; font-size: 14px;">
-                                Question @_currentGame.CurrentQuestionIndex / @_currentGame.TotalQuestions
-                            </span>
-                            <span style="color: #fbbf24; font-size: 18px; font-weight: 600;">
-                                @MultiplayerPoints.LevelPoints.GetValueOrDefault(_currentGame.CurrentQuestionIndex, 100) pts
-                            </span>
+                    <!-- Question + Host Answer UI -->
+                    <div class="question-card" style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
+                            <span style="background: #7c3aed; color: white; padding: 5px 12px; border-radius: 15px; font-size: 13px;">Q @_currentGame.CurrentQuestionIndex / @_currentGame.TotalQuestions</span>
+                            <span style="color: #fbbf24; font-size: 16px; font-weight: 600;">@MultiplayerPoints.LevelPoints.GetValueOrDefault(_currentGame.CurrentQuestionIndex, 100) pts</span>
                         </div>
+                        <h2 style="color: white; font-size: 20px; text-align: center; margin: 0 0 20px; line-height: 1.5;">@_currentQuestion.QuestionText</h2>
                         
-                        <h2 style="color: white; font-size: 22px; text-align: center; margin: 0 0 25px 0; line-height: 1.5;">@_currentQuestion.QuestionText</h2>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <!-- Host can answer these options -->
+                        <div class="grid-2col">
                             @foreach (var opt in new[] { ("A", _currentQuestion.OptionA), ("B", _currentQuestion.OptionB), ("C", _currentQuestion.OptionC), ("D", _currentQuestion.OptionD) })
                             {
-                                <div style="padding: 15px 20px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 10px; color: white;">
-                                    <strong style="color: #7c3aed; margin-right: 10px;">@opt.Item1.</strong> @opt.Item2
-                                </div>
+                                var key = opt.Item1;
+                                var isSelected = _hostSelectedAnswer == key;
+                                var isHidden = _hostHiddenOptions.Contains(key);
+                                var isDisabled = _hostHasAnswered || isHidden;
+                                <button @onclick="() => HostSelectAnswer(key)" disabled="@isDisabled"
+                                        class="option-btn @(isSelected ? "selected" : "") @(isHidden ? "hidden" : "")">
+                                    <span style="color: #7c3aed; font-weight: 700; margin-right: 10px;">@key.</span>
+                                    <span>@opt.Item2</span>
+                                    @if (isSelected) { <span style="float: right; color: #7c3aed;">✓</span> }
+                                </button>
                             }
                         </div>
                     </div>
                     
-                    <!-- Answer Stats -->
-                    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #9ca3af;">
-                                @_answeredCount / @_players.Count answered
-                            </span>
-                            <div style="flex: 1; margin: 0 20px; background: #1a1a2e; border-radius: 10px; height: 8px;">
+                    <!-- Host Lifelines + Lock Answer -->
+                    @if (!_hostHasAnswered)
+                    {
+                        <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center;">
+                            <button @onclick="HostUseFiftyFifty" disabled="@_hostFiftyFiftyUsed" class="lifeline-btn fifty">50:50</button>
+                            <button @onclick="HostSkipQuestion" disabled="@_hostSkipUsed" class="lifeline-btn skip">⏭ Skip</button>
+                            <button @onclick="HostUseDoubleDip" disabled="@(_hostDoubleDipUsed || _hostDoubleDipActive)" class="lifeline-btn double">🎯 Double Dip</button>
+                            @if (_hostDoubleDipActive) { <span style="color: #a855f7; font-size: 13px; align-self: center;">Double Dip Active!</span> }
+                        </div>
+                        @if (_hostSelectedAnswer != null)
+                        {
+                            <div style="text-align: center; margin-bottom: 12px;">
+                                <button @onclick="HostLockAnswer" style="padding: 12px 40px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; animation: glow 1.5s infinite;">
+                                    🔒 Lock My Answer
+                                </button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="text-align: center; padding: 12px; background: rgba(124,58,237,0.1); border-radius: 10px; margin-bottom: 12px;">
+                            <span style="color: #7c3aed;">✓ Your answer locked!</span>
+                        </div>
+                    }
+                    
+                    <!-- Answer Stats Bar -->
+                    <div class="card" style="margin-bottom: 12px; padding: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <span style="color: #9ca3af; font-size: 14px;">@_answeredCount / @_players.Count answered</span>
+                            <div style="flex: 1; min-width: 100px; margin: 0 15px; background: #1a1a2e; border-radius: 10px; height: 6px;">
                                 <div style="width: @(_players.Count > 0 ? (_answeredCount * 100 / _players.Count) : 0)%; background: #7c3aed; height: 100%; border-radius: 10px; transition: width 0.3s;"></div>
                             </div>
-                            <span style="color: @(_timeRemaining <= 5 ? "#ef4444" : "#fbbf24"); font-size: 24px; font-weight: 700;">⏱️ @_timeRemaining s</span>
+                            <span style="color: @(_timeRemaining <= 5 ? "#ef4444" : "#fbbf24"); font-size: 22px; font-weight: 700;">⏱️ @_timeRemaining s</span>
                         </div>
                     </div>
                     
-                    <div style="display: flex; gap: 15px;">
-                        <button @onclick="RevealAnswer" style="flex: 1; padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                            🔓 Reveal Answer
-                        </button>
-                    </div>
+                    <button @onclick="RevealAnswer" style="width: 100%; padding: 14px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">
+                        🔓 Reveal Answer
+                    </button>
                 }
                 else if (_currentGame.Status == MultiplayerGameStatus.ShowingAnswer && _currentQuestion != null)
                 {
                     <!-- Answer Revealed -->
-                    <div style="background: linear-gradient(180deg, #0f172a, #1e293b); border: 2px solid #10b981; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
-                        <h2 style="color: white; font-size: 20px; text-align: center; margin: 0 0 20px 0;">@_currentQuestion.QuestionText</h2>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <div class="answer-card-correct" style="margin-bottom: 15px;">
+                        <h2 style="color: white; font-size: 18px; text-align: center; margin: 0 0 18px;">@_currentQuestion.QuestionText</h2>
+                        <div class="grid-2col" style="margin-bottom: 15px;">
                             @foreach (var opt in new[] { ("A", _currentQuestion.OptionA, CorrectOption.A), ("B", _currentQuestion.OptionB, CorrectOption.B), ("C", _currentQuestion.OptionC, CorrectOption.C), ("D", _currentQuestion.OptionD, CorrectOption.D) })
                             {
                                 var isCorrect = opt.Item3 == _currentQuestion.CorrectAnswer;
-                                <div style="padding: 15px 20px; background: @(isCorrect ? "rgba(16, 185, 129, 0.2)" : "#1a1a2e"); border: 2px solid @(isCorrect ? "#10b981" : "#2a3f5f"); border-radius: 10px; color: white;">
-                                    <strong style="color: @(isCorrect ? "#10b981" : "#7c3aed"); margin-right: 10px;">@opt.Item1.</strong> @opt.Item2
+                                var wasSelected = opt.Item1 == _hostSelectedAnswer;
+                                <div class="option-btn @(isCorrect ? "correct" : wasSelected ? "wrong" : "")" style="cursor: default;">
+                                    <span style="color: @(isCorrect ? "#10b981" : "#7c3aed"); font-weight: 700; margin-right: 10px;">@opt.Item1.</span> @opt.Item2
                                     @if (isCorrect) { <span style="float: right; color: #10b981;">✓</span> }
                                 </div>
                             }
                         </div>
-                        
                         @if (!string.IsNullOrEmpty(_currentQuestion.Explanation))
                         {
-                            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 8px; padding: 15px;">
-                                <p style="color: #3b82f6; margin: 0; font-size: 14px;">💡 @_currentQuestion.Explanation</p>
+                            <div style="background: rgba(59,130,246,0.1); border: 1px solid #3b82f6; border-radius: 8px; padding: 12px;">
+                                <p style="color: #3b82f6; margin: 0; font-size: 13px;">💡 @_currentQuestion.Explanation</p>
                             </div>
                         }
                     </div>
-                    
-                    <!-- Answer Distribution -->
-                    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                        <h4 style="color: white; margin: 0 0 15px 0;">Answer Distribution</h4>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-                            @foreach (var opt in new[] { "A", "B", "C", "D" })
-                            {
-                                var count = _answerDistribution.GetValueOrDefault(opt, 0);
-                                var pct = _players.Count > 0 ? (count * 100 / _players.Count) : 0;
-                                var isCorrect = opt == _currentQuestion.CorrectAnswer.ToString();
-                                <div style="text-align: center;">
-                                    <div style="height: 60px; background: #1a1a2e; border-radius: 8px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden;">
-                                        <div style="width: 100%; height: @(pct)%; background: @(isCorrect ? "#10b981" : "#7c3aed"); transition: height 0.5s;"></div>
-                                    </div>
-                                    <div style="color: @(isCorrect ? "#10b981" : "white"); margin-top: 8px; font-weight: 600;">@opt</div>
-                                    <div style="color: #6b7280; font-size: 12px;">@count (@pct%)</div>
-                                </div>
-                            }
+
+                    <!-- Host result -->
+                    @if (_hostWasCorrect.HasValue)
+                    {
+                        <div style="text-align: center; margin-bottom: 12px;">
+                            <span style="background: @(_hostWasCorrect.Value ? "#10b981" : "#ef4444"); color: white; padding: 8px 20px; border-radius: 20px; font-size: 15px; font-weight: 600;">
+                                @(_hostWasCorrect.Value ? $"✓ You got it right! +{_hostPointsEarned}" : $"✗ Wrong! {_hostPointsEarned} pts")
+                            </span>
                         </div>
-                    </div>
+                    }
                     
-                    <div style="display: flex; gap: 15px;">
-                        <button @onclick="ShowLeaderboard" style="flex: 1; padding: 15px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                            🏆 Show Leaderboard
-                        </button>
+                    <div style="display: flex; gap: 12px;">
+                        <button @onclick="ShowLeaderboard" style="flex: 1; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">🏆 Show Leaderboard</button>
                     </div>
                 }
                 else if (_currentGame.Status == MultiplayerGameStatus.ShowingLeaderboard)
                 {
-                    <!-- Leaderboard -->
-                    <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 25px; margin-bottom: 20px;">
-                        <h2 style="color: white; margin: 0 0 20px 0; text-align: center;">🏆 Leaderboard</h2>
-                        
-                        @foreach (var entry in _leaderboard.Take(10))
+                    <div class="card" style="margin-bottom: 15px; padding: 25px;">
+                        <h2 style="color: white; margin: 0 0 18px; text-align: center;">🏆 Leaderboard</h2>
+                        @foreach (var entry in _leaderboard.Take(15))
                         {
-                            var medalColor = entry.Rank switch { 1 => "#fbbf24", 2 => "#9ca3af", 3 => "#cd7f32", _ => "transparent" };
-                            <div style="display: flex; align-items: center; padding: 12px 15px; background: @(entry.Rank <= 3 ? "rgba(124, 58, 237, 0.1)" : "#1a1a2e"); border-radius: 8px; margin-bottom: 8px; border: @(entry.Rank <= 3 ? "1px solid #7c3aed" : "none");">
-                                <span style="width: 40px; font-size: 20px; font-weight: 700; color: @(entry.Rank <= 3 ? medalColor : "#6b7280");">
-                                    @(entry.Rank <= 3 ? (entry.Rank == 1 ? "🥇" : entry.Rank == 2 ? "🥈" : "🥉") : $"#{entry.Rank}")
-                                </span>
-                                <span style="flex: 1; color: white; font-weight: 500;">@entry.PlayerName</span>
-                                <span style="color: #10b981; margin-right: 15px;">@entry.CorrectAnswers ✓</span>
-                                <span style="color: #ef4444; margin-right: 15px;">@entry.WrongAnswers ✗</span>
-                                <span style="color: #fbbf24; font-weight: 700; min-width: 80px; text-align: right;">@entry.TotalPoints.ToString("N0") pts</span>
+                            var medal = entry.Rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"#{entry.Rank}" };
+                            <div style="display: flex; align-items: center; padding: 10px 12px; background: @(entry.Rank <= 3 ? "rgba(124,58,237,0.1)" : "#1a1a2e"); border-radius: 8px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                                <span style="width: 36px; font-size: @(entry.Rank <= 3 ? "18px" : "14px"); color: @(entry.Rank <= 3 ? "#fbbf24" : "#6b7280"); font-weight: 700;">@medal</span>
+                                <span style="flex: 1; color: white; font-weight: 500; min-width: 80px;">@entry.PlayerName</span>
+                                <span style="color: #10b981; font-size: 13px; margin-right: 10px;">@entry.CorrectAnswers✓</span>
+                                <span style="color: #ef4444; font-size: 13px; margin-right: 10px;">@entry.WrongAnswers✗</span>
+                                <span style="color: #9ca3af; font-size: 12px; margin-right: 10px;">@(entry.AverageTime > 0 ? $"{entry.AverageTime/1000.0:F1}s" : "-")</span>
+                                <span style="color: #fbbf24; font-weight: 700; min-width: 70px; text-align: right;">@entry.TotalPoints.ToString("N0") pts</span>
                             </div>
                         }
                     </div>
-                    
-                    <div style="display: flex; gap: 15px;">
+                    <div style="display: flex; gap: 12px;">
                         @if (_currentGame.CurrentQuestionIndex < _currentGame.TotalQuestions)
-                        {
-                            <button @onclick="NextQuestion" style="flex: 1; padding: 15px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                                ➡️ Next Question (@(_currentGame.CurrentQuestionIndex + 1) of @_currentGame.TotalQuestions)
-                            </button>
-                        }
+                        { <button @onclick="NextQuestion" style="flex: 1; padding: 14px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">➡️ Next Question (@(_currentGame.CurrentQuestionIndex + 1)/@_currentGame.TotalQuestions)</button> }
                         else
-                        {
-                            <button @onclick="EndGame" style="flex: 1; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                                🏁 End Game
-                            </button>
-                        }
+                        { <button @onclick="EndGame" style="flex: 1; padding: 14px; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">🏁 End Game</button> }
                     </div>
                 }
                 else if (_currentGame.Status == MultiplayerGameStatus.Finished)
                 {
-                    <!-- Game Finished -->
-                    <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); border: 2px solid #fbbf24; border-radius: 16px; padding: 40px; text-align: center;">
-                        <div style="font-size: 80px; margin-bottom: 20px;">🏆</div>
-                        <h1 style="color: #fbbf24; margin: 0 0 10px 0;">Game Complete!</h1>
-                        @if (_leaderboard.Any())
-                        {
-                            <p style="color: white; font-size: 24px; margin: 0 0 30px 0;">Winner: @_leaderboard.First().PlayerName</p>
-                        }
-                        
-                        <div style="background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 30px; text-align: left;">
-                            <h3 style="color: white; margin: 0 0 15px 0; text-align: center;">Final Standings</h3>
-                            @foreach (var entry in _leaderboard)
+                    <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); border: 2px solid #fbbf24; border-radius: 16px; padding: 35px; text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 15px;">🏆</div>
+                        <h1 style="color: #fbbf24; margin: 0 0 8px;">Game Complete!</h1>
+                        @if (_leaderboard.Any()) { <p style="color: white; font-size: 22px; margin: 0 0 25px;">Winner: @_leaderboard.First().PlayerName</p> }
+                        <div style="background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 25px; text-align: left;">
+                            <h3 style="color: white; margin: 0 0 12px; text-align: center;">Final Standings</h3>
+                            @foreach (var e in _leaderboard)
                             {
-                                <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #2a3f5f;">
-                                    <span style="width: 40px; color: #7c3aed; font-weight: 700;">#@entry.Rank</span>
-                                    <span style="flex: 1; color: white;">@entry.PlayerName</span>
-                                    <span style="color: #fbbf24; font-weight: 700;">@entry.TotalPoints.ToString("N0") pts</span>
+                                <div style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #2a3f5f; flex-wrap: wrap; gap: 6px;">
+                                    <span style="width: 36px; color: #7c3aed; font-weight: 700;">#@e.Rank</span>
+                                    <span style="flex: 1; color: white; min-width: 80px;">@e.PlayerName</span>
+                                    <span style="color: #9ca3af; font-size: 12px; margin-right: 10px;">@(e.AverageTime > 0 ? $"avg {e.AverageTime/1000.0:F1}s" : "")</span>
+                                    <span style="color: #fbbf24; font-weight: 700;">@e.TotalPoints.ToString("N0") pts</span>
                                 </div>
                             }
                         </div>
-                        
-                        <button @onclick="CreateNewGame" style="padding: 15px 40px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                            🎮 Create New Game
-                        </button>
+                        <button @onclick="CreateNewGame" style="padding: 14px 35px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">🎮 New Game</button>
+                    </div>
+                }
+                
+                <!-- Live Leaderboard (always visible during game) -->
+                @if (_currentGame.Status >= MultiplayerGameStatus.ShowingQuestion && _currentGame.Status < MultiplayerGameStatus.Finished && _liveLeaderboard.Any())
+                {
+                    <div class="live-lb" style="margin-top: 15px;">
+                        <div class="live-lb-header" @onclick="() => _lbExpanded = !_lbExpanded">
+                            <span style="color: white; font-weight: 600; font-size: 14px;">📊 Live Leaderboard</span>
+                            <span style="color: #9ca3af; font-size: 12px;">@(_lbExpanded ? "▲ Collapse" : "▼ Expand")</span>
+                        </div>
+                        @if (_lbExpanded)
+                        {
+                            <div class="live-lb-body">
+                                @foreach (var e in _liveLeaderboard)
+                                {
+                                    var isMe = e.PlayerId == _hostPlayerId;
+                                    <div class="lb-row @(isMe ? "me" : e.Rank <= 3 ? "top3" : "")">
+                                        <span class="lb-rank" style="color: @(e.Rank <= 3 ? "#fbbf24" : "#6b7280");">@(e.Rank <= 3 ? (e.Rank == 1 ? "🥇" : e.Rank == 2 ? "🥈" : "🥉") : $"#{e.Rank}")</span>
+                                        <span class="lb-name">@e.PlayerName @(isMe ? "(You)" : "")</span>
+                                        <span class="lb-stat" style="color: #10b981;">@e.CorrectAnswers✓</span>
+                                        <span class="lb-stat">@(e.TotalTimeTaken > 0 ? $"{e.TotalTimeTaken/1000.0:F1}s" : "-")</span>
+                                        <span class="lb-pts">@e.TotalPoints.ToString("N0")</span>
+                                    </div>
+                                }
+                            </div>
+                        }
                     </div>
                 }
             </div>
             
             <!-- Player List Sidebar -->
-            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 12px; padding: 20px; height: fit-content;">
-                <h3 style="color: white; margin: 0 0 15px 0;">Players (@_players.Count / @_currentGame.MaxPlayers)</h3>
-                
-                <div style="max-height: 500px; overflow-y: auto;">
+            <div class="card" style="height: fit-content; padding: 18px;">
+                <h3 style="color: white; margin: 0 0 12px; font-size: 15px;">Players (@_players.Count(p => !p.IsHost) + Host)</h3>
+                <div style="max-height: 400px; overflow-y: auto;">
                     @foreach (var player in _players.OrderByDescending(p => p.TotalPoints))
                     {
-                        <div style="display: flex; align-items: center; padding: 10px; background: #1a1a2e; border-radius: 8px; margin-bottom: 8px;">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: @(player.IsConnected ? "#10b981" : "#ef4444"); margin-right: 10px;"></div>
-                            <div style="flex: 1;">
-                                <div style="color: white; font-weight: 500;">@player.PlayerName</div>
-                                <div style="color: #6b7280; font-size: 12px;">@player.TotalPoints pts</div>
+                        <div style="display: flex; align-items: center; padding: 8px; background: #1a1a2e; border-radius: 8px; margin-bottom: 5px;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: @(player.IsConnected ? "#10b981" : "#ef4444"); margin-right: 8px; flex-shrink: 0;"></div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="color: white; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@player.PlayerName</div>
+                                <div style="color: #6b7280; font-size: 11px;">@player.TotalPoints pts</div>
                             </div>
                             @if (player.HasAnsweredCurrent && _currentGame.Status == MultiplayerGameStatus.ShowingQuestion)
-                            {
-                                <span style="color: #10b981;">✓</span>
-                            }
+                            { <span style="color: #10b981; font-size: 12px;">✓</span> }
                         </div>
                     }
                 </div>
@@ -361,6 +329,10 @@ else
         </div>
     </div>
 }
+
+<style>
+    @@keyframes glow { 0%,100% { box-shadow: 0 0 15px rgba(16,185,129,0.4); } 50% { box-shadow: 0 0 30px rgba(16,185,129,0.7); } }
+</style>
 
 @code {
     [Parameter] public Guid? GameId { get; set; }
@@ -384,6 +356,22 @@ else
     private int _timeRemaining = 30;
     private int _answeredCount = 0;
     
+    // Host-as-player state
+    private Guid _hostPlayerId;
+    private string? _hostSelectedAnswer;
+    private bool _hostHasAnswered = false;
+    private bool _hostFiftyFiftyUsed = false;
+    private bool _hostSkipUsed = false;
+    private bool _hostDoubleDipUsed = false;
+    private bool _hostDoubleDipActive = false;
+    private List<string> _hostHiddenOptions = new();
+    private bool? _hostWasCorrect;
+    private int _hostPointsEarned = 0;
+    
+    // Live leaderboard
+    private List<LiveLbEntry> _liveLeaderboard = new();
+    private bool _lbExpanded = true;
+    
     private HubConnection? _hubConnection;
     private System.Threading.Timer? _timer;
 
@@ -392,23 +380,13 @@ else
         try
         {
             _currentUser = await AuthService.GetCurrentUserAsync();
-            if (_currentUser == null)
-            {
-                NavigationManager.NavigateTo("/login");
-                return;
-            }
+            if (_currentUser == null) { NavigationManager.NavigateTo("/login"); return; }
             
             _levelCounts = await QuestionService.GetQuestionCountByLevelAsync(_currentUser.Id);
             _missingLevels = Enumerable.Range(1, 15).Where(l => _levelCounts.GetValueOrDefault(l, 0) == 0).ToList();
             
-            try
-            {
-                _previousGames = await MultiplayerService.GetHostGamesAsync(_currentUser.Id);
-            }
-            catch
-            {
-                _previousGames = new List<MultiplayerGame>();
-            }
+            try { _previousGames = await MultiplayerService.GetHostGamesAsync(_currentUser.Id); }
+            catch { _previousGames = new(); }
             
             if (GameId.HasValue)
             {
@@ -420,11 +398,7 @@ else
                 }
             }
         }
-        catch (Exception ex)
-        {
-            // Log or show error
-            Console.WriteLine($"Error in OnInitializedAsync: {ex.Message}");
-        }
+        catch (Exception ex) { Console.WriteLine($"Init error: {ex.Message}"); }
     }
 
     private async Task SetupSignalR()
@@ -434,7 +408,7 @@ else
             .WithAutomaticReconnect()
             .Build();
 
-        _hubConnection.On<object>("PlayerListUpdated", async (players) =>
+        _hubConnection.On<object>("PlayerListUpdated", async (_) =>
         {
             _currentGame = await MultiplayerService.GetGameByIdAsync(_currentGame!.Id);
             _players = _currentGame?.Players.ToList() ?? new();
@@ -445,7 +419,7 @@ else
         {
             _currentGame = await MultiplayerService.GetGameByIdAsync(_currentGame!.Id);
             _players = _currentGame?.Players.ToList() ?? new();
-            Snackbar.Add($"{name} joined the game!", Severity.Info);
+            Snackbar.Add($"{name} joined!", Severity.Info);
             await InvokeAsync(StateHasChanged);
         });
 
@@ -457,7 +431,7 @@ else
             await InvokeAsync(StateHasChanged);
         });
 
-        _hubConnection.On<object>("PlayerAnswered", async (data) =>
+        _hubConnection.On<object>("PlayerAnswered", async (_) =>
         {
             _answeredCount++;
             _currentGame = await MultiplayerService.GetGameByIdAsync(_currentGame!.Id);
@@ -465,165 +439,254 @@ else
             await InvokeAsync(StateHasChanged);
         });
 
-        _hubConnection.On("AllPlayersAnswered", async () =>
+        _hubConnection.On("AllPlayersAnswered", async () => await InvokeAsync(StateHasChanged));
+
+        _hubConnection.On<Guid>("HostPlayerReady", async (playerId) =>
         {
+            _hostPlayerId = playerId;
+            // Load host's lifeline state
+            var game = await MultiplayerService.GetGameByIdAsync(_currentGame!.Id);
+            var hostPlayer = game?.Players.FirstOrDefault(p => p.Id == playerId);
+            if (hostPlayer != null)
+            {
+                _hostFiftyFiftyUsed = hostPlayer.FiftyFiftyUsed;
+                _hostSkipUsed = hostPlayer.SkipQuestionUsed;
+                _hostDoubleDipUsed = hostPlayer.DoubleDipUsed;
+            }
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<List<string>>("FiftyFiftyResult", async (hidden) =>
+        {
+            _hostHiddenOptions = hidden;
+            await PlaySound("soundLifeline");
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On("QuestionSkipped", async () =>
+        {
+            _hostHasAnswered = true;
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<object>("DoubleDipResult", async (data) =>
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(data);
+            var obj = System.Text.Json.JsonDocument.Parse(json);
+            var isCorrect = obj.RootElement.GetProperty("isCorrect").GetBoolean();
+            var answer = obj.RootElement.GetProperty("answer").GetString();
+            
+            if (isCorrect)
+            {
+                _hostHasAnswered = true;
+            }
+            else
+            {
+                // First attempt wrong - eliminate that option
+                if (answer != null) _hostHiddenOptions.Add(answer);
+                _hostSelectedAnswer = null;
+            }
+            await InvokeAsync(StateHasChanged);
+        });
+
+        // Live leaderboard updates
+        _hubConnection.On<object>("LiveLeaderboard", async (data) =>
+        {
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                var arr = System.Text.Json.JsonDocument.Parse(json);
+                _liveLeaderboard.Clear();
+                foreach (var e in arr.RootElement.EnumerateArray())
+                {
+                    _liveLeaderboard.Add(new LiveLbEntry
+                    {
+                        Rank = e.GetProperty("rank").GetInt32(),
+                        PlayerId = Guid.Parse(e.GetProperty("id").GetString()!),
+                        PlayerName = e.GetProperty("playerName").GetString() ?? "",
+                        TotalPoints = e.GetProperty("totalPoints").GetInt32(),
+                        CorrectAnswers = e.GetProperty("correctAnswers").GetInt32(),
+                        WrongAnswers = e.GetProperty("wrongAnswers").GetInt32(),
+                        TotalTimeTaken = e.GetProperty("totalTimeTaken").GetInt32()
+                    });
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+            catch { }
+        });
+
+        // Answer revealed - find host's result
+        _hubConnection.On<object>("AnswerRevealed", async (data) =>
+        {
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                var obj = System.Text.Json.JsonDocument.Parse(json);
+                var results = obj.RootElement.GetProperty("playerResults");
+                var hostIdStr = _hostPlayerId.ToString();
+                foreach (var r in results.EnumerateArray())
+                {
+                    if (r.GetProperty("playerId").GetString() == hostIdStr)
+                    {
+                        _hostWasCorrect = r.GetProperty("isCorrect").GetBoolean();
+                        _hostPointsEarned = r.GetProperty("pointsEarned").GetInt32();
+                        break;
+                    }
+                }
+            }
+            catch { }
             await InvokeAsync(StateHasChanged);
         });
 
         await _hubConnection.StartAsync();
-        
-        // Join as host - actually call the hub method
-        await _hubConnection.InvokeAsync("JoinAsHost", _currentGame!.RoomCode);
+        await _hubConnection.InvokeAsync("JoinAsHost", _currentGame!.RoomCode, _currentUser!.FullName);
     }
 
+    // ===== HOST ANSWER METHODS =====
+    private void HostSelectAnswer(string answer)
+    {
+        if (_hostHasAnswered || _hostHiddenOptions.Contains(answer)) return;
+        _hostSelectedAnswer = answer;
+    }
+
+    private async Task HostLockAnswer()
+    {
+        if (_hostSelectedAnswer == null || _hostHasAnswered || _hubConnection == null || _currentGame == null) return;
+        
+        if (_hostDoubleDipActive)
+        {
+            // Double dip first attempt
+            await _hubConnection.InvokeAsync("DoubleDipCheck", _currentGame.Id, _hostPlayerId, _hostSelectedAnswer);
+            _hostDoubleDipActive = false;
+            return;
+        }
+        
+        var timeTaken = (int)(DateTime.UtcNow - (_currentGame.QuestionStartedAt ?? DateTime.UtcNow)).TotalMilliseconds;
+        await _hubConnection.InvokeAsync("SubmitAnswer", _currentGame.Id, _hostPlayerId, _hostSelectedAnswer, timeTaken, _hostHiddenOptions.Any());
+        _hostHasAnswered = true;
+        StateHasChanged();
+    }
+
+    private async Task HostUseFiftyFifty()
+    {
+        if (_hostFiftyFiftyUsed || _hostHasAnswered || _hubConnection == null || _currentGame == null) return;
+        _hostFiftyFiftyUsed = true;
+        await _hubConnection.InvokeAsync("UseFiftyFifty", _currentGame.Id, _hostPlayerId);
+    }
+
+    private async Task HostSkipQuestion()
+    {
+        if (_hostSkipUsed || _hostHasAnswered || _hubConnection == null || _currentGame == null) return;
+        _hostSkipUsed = true;
+        await _hubConnection.InvokeAsync("SkipQuestion", _currentGame.Id, _hostPlayerId);
+    }
+
+    private void HostUseDoubleDip()
+    {
+        if (_hostDoubleDipUsed || _hostHasAnswered) return;
+        _hostDoubleDipUsed = true;
+        _hostDoubleDipActive = true;
+    }
+
+    // ===== GAME CONTROL METHODS =====
     private async Task CreateGame()
     {
         if (_currentUser == null || string.IsNullOrWhiteSpace(_gameName)) return;
-        
         _isCreating = true;
         try
         {
             _currentGame = await MultiplayerService.CreateGameAsync(_currentUser.Id, _gameName, _maxPlayers, _timePerQuestion);
-            _players = new List<MultiplayerPlayer>();
+            _players = new();
             NavigationManager.NavigateTo($"/admin/multiplayer/host/{_currentGame.Id}", forceLoad: true);
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error creating game: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isCreating = false;
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _isCreating = false; }
     }
 
-    private void ResumeGame(Guid gameId)
-    {
-        NavigationManager.NavigateTo($"/admin/multiplayer/host/{gameId}", forceLoad: true);
-    }
+    private void ResumeGame(Guid gameId) => NavigationManager.NavigateTo($"/admin/multiplayer/host/{gameId}", forceLoad: true);
 
     private async Task StartGame()
     {
-        if (_hubConnection == null || _currentGame == null || _players.Count < 1) return;
-        
+        if (_hubConnection == null || _currentGame == null || _players.Count(p => !p.IsHost) < 1) return;
         try
         {
             await _hubConnection.InvokeAsync("StartGame", _currentGame.Id);
             _currentGame.Status = MultiplayerGameStatus.Starting;
             await PlaySound("soundQuestion");
-            
-            // Start countdown
             _countdown = 3;
             StateHasChanged();
-            
             _timer = new System.Threading.Timer(async _ =>
             {
                 _countdown--;
-                if (_countdown <= 0)
-                {
-                    _timer?.Dispose();
-                    await InvokeAsync(async () =>
-                    {
-                        await NextQuestion();
-                    });
-                }
-                else
-                {
-                    await InvokeAsync(StateHasChanged);
-                }
+                if (_countdown <= 0) { _timer?.Dispose(); await InvokeAsync(async () => await NextQuestion()); }
+                else await InvokeAsync(StateHasChanged);
             }, null, 1000, 1000);
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error starting game: {ex.Message}", Severity.Error);
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
     }
 
     private async Task NextQuestion()
     {
         if (_hubConnection == null || _currentGame == null) return;
-        
         try
         {
+            // Reset host answer state
+            _hostSelectedAnswer = null;
+            _hostHasAnswered = false;
+            _hostHiddenOptions.Clear();
+            _hostDoubleDipActive = false;
+            _hostWasCorrect = null;
+            _hostPointsEarned = 0;
             _answeredCount = 0;
-            _answerDistribution.Clear();
+
             await _hubConnection.InvokeAsync("ShowNextQuestion", _currentGame.Id);
-            
-            // Wait a moment for the hub to save to DB
             await Task.Delay(300);
-            
-            // Refresh game state from database
             _currentGame = await MultiplayerService.GetGameByIdAsync(_currentGame.Id);
             if (_currentGame == null) return;
             _players = _currentGame.Players.ToList();
             
-            // Load current question
             if (_currentGame.CurrentQuestionId != null)
-            {
                 _currentQuestion = await QuestionService.GetByIdAsync(_currentGame.CurrentQuestionId.Value);
-            }
-            
-            if (_currentQuestion == null)
-            {
-                Snackbar.Add("Failed to load question", Severity.Error);
-                return;
-            }
+            if (_currentQuestion == null) { Snackbar.Add("Failed to load question", Severity.Error); return; }
             
             await PlaySound("soundQuestion");
-            
-            // Start question timer
             _timeRemaining = _currentGame.TimePerQuestion;
             _timer?.Dispose();
             _timer = new System.Threading.Timer(async _ =>
             {
                 _timeRemaining--;
-                if (_timeRemaining <= 5 && _timeRemaining > 0)
-                {
-                    await PlaySound("soundTick");
-                }
-                if (_timeRemaining <= 0)
-                {
-                    _timer?.Dispose();
-                }
+                if (_timeRemaining <= 5 && _timeRemaining > 0) await PlaySound("soundTick");
+                if (_timeRemaining <= 0) _timer?.Dispose();
                 await InvokeAsync(StateHasChanged);
             }, null, 1000, 1000);
-            
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading question: {ex.Message}", Severity.Error);
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
     }
 
     private async Task RevealAnswer()
     {
         if (_hubConnection == null || _currentGame == null) return;
-        
         _timer?.Dispose();
-        
         try
         {
+            // Auto-submit host answer if not yet submitted
+            if (!_hostHasAnswered && _hostSelectedAnswer != null)
+                await HostLockAnswer();
+            
             await _hubConnection.InvokeAsync("RevealAnswer", _currentGame.Id);
             _currentGame.Status = MultiplayerGameStatus.ShowingAnswer;
-            
-            // Refresh players to get updated stats
             _currentGame = await MultiplayerService.GetGameByIdAsync(_currentGame.Id);
             _players = _currentGame?.Players.ToList() ?? new();
-            
             await PlaySound("soundCorrect");
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error revealing answer: {ex.Message}", Severity.Error);
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
     }
 
     private async Task ShowLeaderboard()
     {
         if (_hubConnection == null || _currentGame == null) return;
-        
         try
         {
             await _hubConnection.InvokeAsync("ShowLeaderboard", _currentGame.Id);
@@ -631,16 +694,12 @@ else
             _currentGame.Status = MultiplayerGameStatus.ShowingLeaderboard;
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error showing leaderboard: {ex.Message}", Severity.Error);
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
     }
 
     private async Task EndGame()
     {
         if (_hubConnection == null || _currentGame == null) return;
-        
         try
         {
             await _hubConnection.InvokeAsync("EndGame", _currentGame.Id);
@@ -649,47 +708,24 @@ else
             await PlaySound("soundWin");
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error ending game: {ex.Message}", Severity.Error);
-        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
     }
 
-    private void CreateNewGame()
-    {
-        _currentGame = null;
-        _gameName = "";
-        NavigationManager.NavigateTo("/admin/multiplayer");
-    }
-
-    private string GetJoinLink()
-    {
-        return $"{NavigationManager.BaseUri}join/{_currentGame?.RoomCode}";
-    }
-
+    private void CreateNewGame() { _currentGame = null; _gameName = ""; NavigationManager.NavigateTo("/admin/multiplayer"); }
+    private string GetJoinLink() => $"{NavigationManager.BaseUri}join/{_currentGame?.RoomCode}";
+    
     private async Task CopyJoinLink()
     {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", GetJoinLink());
-            Snackbar.Add("Join link copied!", Severity.Success);
-        }
-        catch
-        {
-            Snackbar.Add("Could not copy link", Severity.Warning);
-        }
+        try { await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", GetJoinLink()); Snackbar.Add("Link copied!", Severity.Success); }
+        catch { Snackbar.Add("Could not copy", Severity.Warning); }
     }
 
-    private async Task PlaySound(string soundId)
+    private async Task PlaySound(string id)
     {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{soundId}')?.play()");
-        }
-        catch { }
+        try { await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{id}')?.play()"); } catch { }
     }
 
-    private string GetStatusColor(MultiplayerGameStatus status) => status switch
+    private string GetStatusColor(MultiplayerGameStatus s) => s switch
     {
         MultiplayerGameStatus.Waiting => "#3b82f6",
         MultiplayerGameStatus.Starting => "#f59e0b",
@@ -703,9 +739,17 @@ else
     public async ValueTask DisposeAsync()
     {
         _timer?.Dispose();
-        if (_hubConnection != null)
-        {
-            await _hubConnection.DisposeAsync();
-        }
+        if (_hubConnection != null) await _hubConnection.DisposeAsync();
+    }
+
+    private class LiveLbEntry
+    {
+        public int Rank { get; set; }
+        public Guid PlayerId { get; set; }
+        public string PlayerName { get; set; } = "";
+        public int TotalPoints { get; set; }
+        public int CorrectAnswers { get; set; }
+        public int WrongAnswers { get; set; }
+        public int TotalTimeTaken { get; set; }
     }
 }

@@ -7,41 +7,29 @@
 
 <PageTitle>Playing - KBC Quiz</PageTitle>
 
-<!-- Sound Elements -->
-<audio id="soundCorrect" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundWrong" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundTick" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundQuestion" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundWin" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" type="audio/mpeg">
-</audio>
-<audio id="soundLifeline" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3" type="audio/mpeg">
-</audio>
+<audio id="soundCorrect" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundWrong" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundTick" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundQuestion" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundWin" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" type="audio/mpeg"></audio>
+<audio id="soundLifeline" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3" type="audio/mpeg"></audio>
+
+<link rel="stylesheet" href="css/app.css" />
 
 <div style="min-height: 100vh; background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);">
     @if (_gameStatus == "Waiting" || _gameStatus == "Starting")
     {
-        <!-- Waiting/Starting Screen -->
         <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
             <div style="text-align: center;">
                 @if (_gameStatus == "Starting")
                 {
-                    <div style="font-size: 150px; color: #fbbf24; font-weight: 700; animation: pulse 0.5s infinite;">@_countdown</div>
-                    <p style="color: #fbbf24; font-size: 24px;">Get Ready!</p>
+                    <div style="font-size: 120px; color: #fbbf24; font-weight: 700; animation: pulse 0.5s infinite;">@_countdown</div>
+                    <p style="color: #fbbf24; font-size: 22px;">Get Ready!</p>
                 }
                 else
                 {
-                    <div style="font-size: 80px; margin-bottom: 20px;">⏳</div>
-                    <h2 style="color: white; font-size: 28px; margin: 0 0 10px 0;">Waiting for Game to Start</h2>
+                    <div style="font-size: 60px; margin-bottom: 15px;">⏳</div>
+                    <h2 style="color: white; font-size: 24px; margin: 0 0 8px;">Waiting for Game to Start</h2>
                     <p style="color: #9ca3af; margin: 0;">@_playerName - @_playerCount players in lobby</p>
                 }
             </div>
@@ -49,53 +37,38 @@
     }
     else if (_gameStatus == "ShowingQuestion")
     {
-        <!-- Question Screen -->
-        <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+        <div class="game-container">
             <!-- Top Bar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span style="background: #7c3aed; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600;">
-                        Q @_questionIndex / @_totalQuestions
-                    </span>
-                    <span style="color: #fbbf24; font-weight: 600;">@_points pts</span>
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: @(_timeRemaining <= 5 ? "#ef4444" : "#9ca3af"); font-size: 32px; font-weight: 700; font-family: monospace;">
-                        @(_timeRemaining.ToString("00"))
-                    </span>
+                    <span style="background: #7c3aed; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 13px;">Q @_questionIndex / @_totalQuestions</span>
+                    <span style="color: #fbbf24; font-weight: 600; font-size: 14px;">@_points pts</span>
                 </div>
+                <span style="color: @(_timeRemaining <= 5 ? "#ef4444" : "#9ca3af"); font-size: 28px; font-weight: 700; font-family: monospace;">@(_timeRemaining.ToString("00"))</span>
             </div>
             
             <!-- Timer Bar -->
-            <div style="background: #1a1a2e; border-radius: 10px; height: 8px; margin-bottom: 25px; overflow: hidden;">
+            <div style="background: #1a1a2e; border-radius: 10px; height: 6px; margin-bottom: 20px; overflow: hidden;">
                 <div style="width: @((_timeRemaining * 100.0 / _maxTime))%; background: @(_timeRemaining <= 5 ? "#ef4444" : _timeRemaining <= 10 ? "#f59e0b" : "#7c3aed"); height: 100%; transition: width 1s linear;"></div>
             </div>
             
             <!-- Question -->
-            <div style="background: linear-gradient(180deg, #16213e, #1e293b); border: 2px solid #7c3aed; border-radius: 16px; padding: 30px; margin-bottom: 25px;">
-                <h2 style="color: white; font-size: 22px; text-align: center; margin: 0; line-height: 1.5;">@_questionText</h2>
+            <div class="question-card" style="margin-bottom: 20px;">
+                <h2 style="color: white; font-size: 20px; text-align: center; margin: 0; line-height: 1.5;">@_questionText</h2>
             </div>
             
             <!-- Options -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div class="grid-2col" style="margin-bottom: 15px;">
                 @foreach (var option in _options)
                 {
                     var isSelected = _selectedAnswer == option.Key;
                     var isHidden = _hiddenOptions.Contains(option.Key);
                     var isDisabled = _hasAnswered || isHidden;
-                    
                     <button @onclick="() => SelectAnswer(option.Key)" disabled="@isDisabled"
-                            style="padding: 20px; text-align: left; border-radius: 12px; cursor: @(isDisabled ? "not-allowed" : "pointer"); transition: all 0.2s;
-                                   background: @(isHidden ? "#1a1a2e" : isSelected ? "rgba(124, 58, 237, 0.3)" : "#16213e");
-                                   border: 2px solid @(isHidden ? "#2a3f5f" : isSelected ? "#7c3aed" : "#2a3f5f");
-                                   opacity: @(isHidden ? "0.3" : "1");
-                                   transform: @(isSelected ? "scale(1.02)" : "scale(1)");">
-                        <span style="color: #7c3aed; font-weight: 700; margin-right: 12px; font-size: 18px;">@option.Key.</span>
-                        <span style="color: @(isHidden ? "#4b5563" : "white"); font-size: 16px;">@option.Value</span>
-                        @if (isSelected)
-                        {
-                            <span style="float: right; color: #7c3aed;">✓</span>
-                        }
+                            class="option-btn @(isSelected ? "selected" : "") @(isHidden ? "hidden" : "")">
+                        <span style="color: #7c3aed; font-weight: 700; margin-right: 10px; font-size: 16px;">@option.Key.</span>
+                        <span>@option.Value</span>
+                        @if (isSelected) { <span style="float: right; color: #7c3aed;">✓</span> }
                     </button>
                 }
             </div>
@@ -103,24 +76,19 @@
             <!-- Lifelines -->
             @if (!_hasAnswered)
             {
-                <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
-                    <button @onclick="UseFiftyFifty" disabled="@_fiftyFiftyUsed"
-                            style="padding: 12px 20px; border-radius: 10px; cursor: @(_fiftyFiftyUsed ? "not-allowed" : "pointer");
-                                   background: @(_fiftyFiftyUsed ? "#1a1a2e" : "rgba(245, 158, 11, 0.2)");
-                                   border: 1px solid @(_fiftyFiftyUsed ? "#4b5563" : "#f59e0b");
-                                   color: @(_fiftyFiftyUsed ? "#4b5563" : "#f59e0b");
-                                   opacity: @(_fiftyFiftyUsed ? "0.5" : "1");">
-                        50:50
-                    </button>
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button @onclick="UseFiftyFifty" disabled="@_fiftyFiftyUsed" class="lifeline-btn fifty">50:50</button>
+                    <button @onclick="UseSkipQuestion" disabled="@_skipUsed" class="lifeline-btn skip">⏭ Skip</button>
+                    <button @onclick="UseDoubleDip" disabled="@(_doubleDipUsed || _doubleDipActive)" class="lifeline-btn double">🎯 Double Dip</button>
+                    @if (_doubleDipActive) { <span style="color: #a855f7; font-size: 13px; align-self: center;">Double Dip Active!</span> }
                 </div>
             }
             
-            <!-- Lock Answer Button -->
+            <!-- Lock Answer -->
             @if (_selectedAnswer != null && !_hasAnswered)
             {
-                <div style="text-align: center;">
-                    <button @onclick="LockAnswer"
-                            style="padding: 16px 60px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; animation: glow 1.5s infinite;">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <button @onclick="LockAnswer" style="padding: 14px 50px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; animation: glow 1.5s infinite;">
                         🔒 Lock Answer
                     </button>
                 </div>
@@ -128,51 +96,72 @@
             
             @if (_hasAnswered)
             {
-                <div style="text-align: center; padding: 20px; background: rgba(124, 58, 237, 0.1); border-radius: 12px;">
-                    <span style="color: #7c3aed; font-size: 18px;">✓ Answer Locked! Waiting for results...</span>
+                <div style="text-align: center; padding: 15px; background: rgba(124,58,237,0.1); border-radius: 10px; margin-bottom: 15px;">
+                    <span style="color: #7c3aed; font-size: 16px;">@(_skipped ? "⏭ Question Skipped!" : "✓ Answer Locked! Waiting...")</span>
                 </div>
             }
             
             <!-- Player Stats -->
-            <div style="display: flex; justify-content: space-around; margin-top: 25px; padding: 15px; background: #16213e; border-radius: 12px;">
-                <div style="text-align: center;">
-                    <div style="color: #6b7280; font-size: 12px;">Your Points</div>
-                    <div style="color: #fbbf24; font-size: 24px; font-weight: 700;">@_totalPoints.ToString("N0")</div>
+            <div class="stats-row" style="padding: 12px; background: #16213e; border-radius: 12px; margin-bottom: 15px;">
+                <div style="text-align: center; min-width: 70px;">
+                    <div style="color: #6b7280; font-size: 11px;">Points</div>
+                    <div style="color: #fbbf24; font-size: 22px; font-weight: 700;">@_totalPoints.ToString("N0")</div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="color: #6b7280; font-size: 12px;">Correct</div>
-                    <div style="color: #10b981; font-size: 24px; font-weight: 700;">@_correctCount</div>
+                <div style="text-align: center; min-width: 50px;">
+                    <div style="color: #6b7280; font-size: 11px;">Correct</div>
+                    <div style="color: #10b981; font-size: 22px; font-weight: 700;">@_correctCount</div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="color: #6b7280; font-size: 12px;">Wrong</div>
-                    <div style="color: #ef4444; font-size: 24px; font-weight: 700;">@_wrongCount</div>
+                <div style="text-align: center; min-width: 50px;">
+                    <div style="color: #6b7280; font-size: 11px;">Wrong</div>
+                    <div style="color: #ef4444; font-size: 22px; font-weight: 700;">@_wrongCount</div>
                 </div>
             </div>
+            
+            <!-- Live Leaderboard -->
+            @if (_liveLeaderboard.Any())
+            {
+                <div class="live-lb">
+                    <div class="live-lb-header" @onclick="() => _lbOpen = !_lbOpen">
+                        <span style="color: white; font-weight: 600; font-size: 14px;">📊 Live Leaderboard @(_myRank > 0 ? $"(You: #{_myRank})" : "")</span>
+                        <span style="color: #9ca3af; font-size: 12px;">@(_lbOpen ? "▲" : "▼")</span>
+                    </div>
+                    @if (_lbOpen)
+                    {
+                        <div class="live-lb-body">
+                            @foreach (var e in _liveLeaderboard)
+                            {
+                                var isMe = e.PlayerId == _playerId;
+                                <div class="lb-row @(isMe ? "me" : e.Rank <= 3 ? "top3" : "")">
+                                    <span class="lb-rank" style="color: @(e.Rank <= 3 ? "#fbbf24" : "#6b7280");">@(e.Rank <= 3 ? (e.Rank == 1 ? "🥇" : e.Rank == 2 ? "🥈" : "🥉") : $"#{e.Rank}")</span>
+                                    <span class="lb-name">@e.PlayerName @(isMe ? "(You)" : "")</span>
+                                    <span class="lb-stat" style="color: #10b981;">@e.CorrectAnswers✓</span>
+                                    <span class="lb-stat">@(e.TotalTimeTaken > 0 ? $"{e.TotalTimeTaken/1000.0:F1}s" : "-")</span>
+                                    <span class="lb-pts">@e.TotalPoints.ToString("N0")</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
     else if (_gameStatus == "ShowingAnswer")
     {
-        <!-- Answer Reveal Screen -->
-        <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span style="background: @(_wasCorrect ? "#10b981" : "#ef4444"); color: white; padding: 10px 25px; border-radius: 25px; font-size: 20px; font-weight: 600;">
-                    @(_wasCorrect ? $"✓ Correct! +{_pointsEarned} pts" : $"✗ Wrong! {_pointsEarned} pts")
+        <div class="game-container">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <span style="background: @(_wasCorrect ? "#10b981" : _skipped ? "#3b82f6" : "#ef4444"); color: white; padding: 8px 22px; border-radius: 25px; font-size: 18px; font-weight: 600;">
+                    @(_skipped ? "⏭ Skipped" : _wasCorrect ? $"✓ Correct! +{_pointsEarned} pts" : $"✗ Wrong! {_pointsEarned} pts")
                 </span>
             </div>
             
-            <!-- Question with Answer -->
-            <div style="background: linear-gradient(180deg, #16213e, #1e293b); border: 2px solid @(_wasCorrect ? "#10b981" : "#ef4444"); border-radius: 16px; padding: 30px; margin-bottom: 25px;">
-                <h2 style="color: white; font-size: 20px; text-align: center; margin: 0 0 20px 0;">@_questionText</h2>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="@(_wasCorrect ? "answer-card-correct" : "answer-card-wrong")" style="margin-bottom: 20px;">
+                <h2 style="color: white; font-size: 18px; text-align: center; margin: 0 0 18px;">@_questionText</h2>
+                <div class="grid-2col">
                     @foreach (var option in _options)
                     {
                         var isCorrect = option.Key == _correctAnswer;
                         var wasSelected = option.Key == _selectedAnswer;
-                        var bgColor = isCorrect ? "rgba(16, 185, 129, 0.2)" : wasSelected && !isCorrect ? "rgba(239, 68, 68, 0.2)" : "#1a1a2e";
-                        var borderColor = isCorrect ? "#10b981" : wasSelected && !isCorrect ? "#ef4444" : "#2a3f5f";
-                        
-                        <div style="padding: 15px 20px; background: @bgColor; border: 2px solid @borderColor; border-radius: 10px;">
+                        <div class="option-btn @(isCorrect ? "correct" : wasSelected && !isCorrect ? "wrong" : "")" style="cursor: default;">
                             <span style="color: @(isCorrect ? "#10b981" : "#7c3aed"); font-weight: 700; margin-right: 10px;">@option.Key.</span>
                             <span style="color: white;">@option.Value</span>
                             @if (isCorrect) { <span style="float: right; color: #10b981;">✓</span> }
@@ -184,39 +173,59 @@
             
             @if (!string.IsNullOrEmpty(_explanation))
             {
-                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
-                    <p style="color: #3b82f6; margin: 0;">💡 @_explanation</p>
+                <div style="background: rgba(59,130,246,0.1); border: 1px solid #3b82f6; border-radius: 10px; padding: 12px; margin-bottom: 15px;">
+                    <p style="color: #3b82f6; margin: 0; font-size: 14px;">💡 @_explanation</p>
                 </div>
             }
             
-            <div style="text-align: center; color: #9ca3af;">
-                Waiting for next question...
-            </div>
+            <div style="text-align: center; color: #9ca3af; margin-bottom: 15px;">Waiting for next question...</div>
+            
+            <!-- Live Leaderboard -->
+            @if (_liveLeaderboard.Any())
+            {
+                <div class="live-lb">
+                    <div class="live-lb-header" @onclick="() => _lbOpen = !_lbOpen">
+                        <span style="color: white; font-weight: 600; font-size: 14px;">📊 Leaderboard @(_myRank > 0 ? $"(You: #{_myRank})" : "")</span>
+                        <span style="color: #9ca3af; font-size: 12px;">@(_lbOpen ? "▲" : "▼")</span>
+                    </div>
+                    @if (_lbOpen)
+                    {
+                        <div class="live-lb-body">
+                            @foreach (var e in _liveLeaderboard)
+                            {
+                                var isMe = e.PlayerId == _playerId;
+                                <div class="lb-row @(isMe ? "me" : e.Rank <= 3 ? "top3" : "")">
+                                    <span class="lb-rank" style="color: @(e.Rank <= 3 ? "#fbbf24" : "#6b7280");">@(e.Rank <= 3 ? (e.Rank == 1 ? "🥇" : e.Rank == 2 ? "🥈" : "🥉") : $"#{e.Rank}")</span>
+                                    <span class="lb-name">@e.PlayerName @(isMe ? "(You)" : "")</span>
+                                    <span class="lb-stat" style="color: #10b981;">@e.CorrectAnswers✓</span>
+                                    <span class="lb-stat">@(e.TotalTimeTaken > 0 ? $"{e.TotalTimeTaken/1000.0:F1}s" : "-")</span>
+                                    <span class="lb-pts">@e.TotalPoints.ToString("N0")</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
     else if (_gameStatus == "ShowingLeaderboard")
     {
-        <!-- Leaderboard Screen -->
-        <div style="max-width: 700px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 25px;">
-                <h1 style="color: #fbbf24; font-size: 32px; margin: 0;">🏆 Leaderboard</h1>
-                <p style="color: #9ca3af; margin: 5px 0 0 0;">After Question @_questionIndex of @_totalQuestions</p>
+        <div class="game-container" style="max-width: 700px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h1 style="color: #fbbf24; font-size: 28px; margin: 0;">🏆 Leaderboard</h1>
+                <p style="color: #9ca3af; margin: 5px 0 0;">After Question @_questionIndex of @_totalQuestions</p>
             </div>
-            
-            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 16px; padding: 20px;">
+            <div class="card" style="padding: 16px;">
                 @foreach (var entry in _leaderboard)
                 {
-                    var isMe = entry.PlayerName == _playerName;
-                    var medalEmoji = entry.Rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"#{entry.Rank}" };
-                    var bgColor = isMe ? "rgba(124, 58, 237, 0.2)" : entry.Rank <= 3 ? "rgba(251, 191, 36, 0.1)" : "#1a1a2e";
-                    
-                    <div style="display: flex; align-items: center; padding: 15px; background: @bgColor; border-radius: 10px; margin-bottom: 10px; border: @(isMe ? "2px solid #7c3aed" : "none");">
-                        <span style="width: 50px; font-size: @(entry.Rank <= 3 ? "24px" : "16px"); color: @(entry.Rank <= 3 ? "#fbbf24" : "#6b7280");">@medalEmoji</span>
-                        <span style="flex: 1; color: white; font-weight: @(isMe ? "700" : "500");">
-                            @entry.PlayerName @(isMe ? "(You)" : "")
-                        </span>
-                        <span style="color: #10b981; margin-right: 20px;">@entry.CorrectAnswers ✓</span>
-                        <span style="color: #fbbf24; font-weight: 700; min-width: 100px; text-align: right;">@entry.TotalPoints.ToString("N0") pts</span>
+                    var isMe = entry.PlayerId == _playerId;
+                    var medal = entry.Rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => $"#{entry.Rank}" };
+                    <div style="display: flex; align-items: center; padding: 12px; background: @(isMe ? "rgba(124,58,237,0.2)" : entry.Rank <= 3 ? "rgba(251,191,36,0.1)" : "#1a1a2e"); border-radius: 10px; margin-bottom: 8px; border: @(isMe ? "2px solid #7c3aed" : "none"); flex-wrap: wrap; gap: 6px;">
+                        <span style="width: 42px; font-size: @(entry.Rank <= 3 ? "22px" : "14px"); color: @(entry.Rank <= 3 ? "#fbbf24" : "#6b7280"); font-weight: 700;">@medal</span>
+                        <span style="flex: 1; color: white; font-weight: @(isMe ? "700" : "500"); min-width: 80px;">@entry.PlayerName @(isMe ? "(You)" : "")</span>
+                        <span style="color: #10b981; font-size: 13px; margin-right: 12px;">@entry.CorrectAnswers ✓</span>
+                        <span style="color: #9ca3af; font-size: 12px; margin-right: 12px;">@(entry.TotalTimeTaken > 0 ? $"{entry.TotalTimeTaken/1000.0:F1}s" : "-")</span>
+                        <span style="color: #fbbf24; font-weight: 700; min-width: 80px; text-align: right;">@entry.TotalPoints.ToString("N0") pts</span>
                     </div>
                 }
             </div>
@@ -224,70 +233,53 @@
     }
     else if (_gameStatus == "Finished")
     {
-        <!-- Game Over Screen -->
         <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
-            <div style="max-width: 600px; width: 100%; text-align: center;">
-                <div style="font-size: 100px; margin-bottom: 20px;">🏆</div>
-                <h1 style="color: #fbbf24; font-size: 36px; margin: 0 0 10px 0;">Game Over!</h1>
+            <div style="max-width: 550px; width: 100%; text-align: center;">
+                <div style="font-size: 80px; margin-bottom: 15px;">🏆</div>
+                <h1 style="color: #fbbf24; font-size: 30px; margin: 0 0 8px;">Game Over!</h1>
+                @if (_myRank == 1) { <p style="color: #10b981; font-size: 22px; margin: 0 0 25px;">🎉 You Won! 🎉</p> }
+                else { <p style="color: white; font-size: 18px; margin: 0 0 25px;">You finished #@_myRank</p> }
                 
-                @if (_myRank == 1)
-                {
-                    <p style="color: #10b981; font-size: 24px; margin: 0 0 30px 0;">🎉 Congratulations! You Won! 🎉</p>
-                }
-                else
-                {
-                    <p style="color: white; font-size: 20px; margin: 0 0 30px 0;">You finished #@_myRank</p>
-                }
-                
-                <!-- Final Stats -->
-                <div style="background: #16213e; border-radius: 16px; padding: 25px; margin-bottom: 30px;">
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                        <div>
-                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 5px;">Final Score</div>
-                            <div style="color: #fbbf24; font-size: 32px; font-weight: 700;">@_totalPoints.ToString("N0")</div>
+                <div class="card" style="margin-bottom: 20px; padding: 20px;">
+                    <div class="stats-row">
+                        <div style="text-align: center; min-width: 70px;">
+                            <div style="color: #6b7280; font-size: 13px; margin-bottom: 4px;">Score</div>
+                            <div style="color: #fbbf24; font-size: 28px; font-weight: 700;">@_totalPoints.ToString("N0")</div>
                         </div>
-                        <div>
-                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 5px;">Correct</div>
-                            <div style="color: #10b981; font-size: 32px; font-weight: 700;">@_correctCount</div>
+                        <div style="text-align: center; min-width: 50px;">
+                            <div style="color: #6b7280; font-size: 13px; margin-bottom: 4px;">Correct</div>
+                            <div style="color: #10b981; font-size: 28px; font-weight: 700;">@_correctCount</div>
                         </div>
-                        <div>
-                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 5px;">Wrong</div>
-                            <div style="color: #ef4444; font-size: 32px; font-weight: 700;">@_wrongCount</div>
+                        <div style="text-align: center; min-width: 50px;">
+                            <div style="color: #6b7280; font-size: 13px; margin-bottom: 4px;">Wrong</div>
+                            <div style="color: #ef4444; font-size: 28px; font-weight: 700;">@_wrongCount</div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Final Leaderboard -->
-                <div style="background: #16213e; border-radius: 16px; padding: 20px; text-align: left;">
-                    <h3 style="color: white; margin: 0 0 15px 0; text-align: center;">Final Standings</h3>
+                <div class="card" style="padding: 16px; text-align: left; margin-bottom: 25px;">
+                    <h3 style="color: white; margin: 0 0 12px; text-align: center;">Final Standings</h3>
                     @foreach (var entry in _leaderboard.Take(10))
                     {
-                        var isMe = entry.PlayerName == _playerName;
-                        <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #2a3f5f;">
-                            <span style="width: 40px; color: #7c3aed; font-weight: 700;">#@entry.Rank</span>
-                            <span style="flex: 1; color: @(isMe ? "#7c3aed" : "white"); font-weight: @(isMe ? "700" : "400");">@entry.PlayerName</span>
+                        var isMe = entry.PlayerId == _playerId;
+                        <div style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #2a3f5f; flex-wrap: wrap; gap: 4px;">
+                            <span style="width: 36px; color: #7c3aed; font-weight: 700;">#@entry.Rank</span>
+                            <span style="flex: 1; color: @(isMe ? "#7c3aed" : "white"); font-weight: @(isMe ? "700" : "400"); min-width: 60px;">@entry.PlayerName</span>
+                            <span style="color: #9ca3af; font-size: 12px; margin-right: 8px;">@(entry.TotalTimeTaken > 0 ? $"{entry.TotalTimeTaken/1000.0:F1}s" : "")</span>
                             <span style="color: #fbbf24; font-weight: 700;">@entry.TotalPoints.ToString("N0")</span>
                         </div>
                     }
                 </div>
                 
-                <button onclick="location.href='/join'" style="margin-top: 30px; padding: 15px 40px; background: #7c3aed; color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer;">
-                    Play Again
-                </button>
+                <button onclick="location.href='/join'" style="padding: 14px 35px; background: #7c3aed; color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer;">Play Again</button>
             </div>
         </div>
     }
 </div>
 
 <style>
-    @@keyframes glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
-        50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.8); }
-    }
-    @@keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-    }
+    @@keyframes glow { 0%,100% { box-shadow: 0 0 15px rgba(16,185,129,0.4); } 50% { box-shadow: 0 0 30px rgba(16,185,129,0.7); } }
+    @@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 </style>
 
 @code {
@@ -300,7 +292,6 @@
     private string _playerName = "";
     private int _playerCount = 0;
     
-    // Game state
     private string _gameStatus = "Waiting";
     private int _countdown = 3;
     private int _questionIndex = 0;
@@ -310,7 +301,6 @@
     private int _timeRemaining = 30;
     private DateTime _questionStartTime;
     
-    // Question data
     private string _questionText = "";
     private Dictionary<string, string> _options = new();
     private string? _selectedAnswer;
@@ -318,36 +308,38 @@
     private string _explanation = "";
     private bool _hasAnswered = false;
     private bool _wasCorrect = false;
+    private bool _skipped = false;
     private int _pointsEarned = 0;
+    
+    // Lifelines
     private List<string> _hiddenOptions = new();
     private bool _fiftyFiftyUsed = false;
+    private bool _skipUsed = false;
+    private bool _doubleDipUsed = false;
+    private bool _doubleDipActive = false;
     
-    // Player stats
+    // Stats
     private int _totalPoints = 0;
     private int _correctCount = 0;
     private int _wrongCount = 0;
     private int _myRank = 0;
     
     // Leaderboard
-    private List<LeaderboardEntry> _leaderboard = new();
+    private List<LbEntry> _leaderboard = new();
+    private List<LbEntry> _liveLeaderboard = new();
+    private bool _lbOpen = true;
     
     private System.Threading.Timer? _timer;
     private bool _soundEnabled = true;
 
     protected override async Task OnInitializedAsync()
     {
-        if (!Guid.TryParse(PlayerId, out _playerId))
-        {
-            NavigationManager.NavigateTo("/join");
-            return;
-        }
+        if (!Guid.TryParse(PlayerId, out _playerId)) { NavigationManager.NavigateTo("/join"); return; }
         
-        // Get game ID and player name from database
         var game = await MultiplayerService.GetGameByRoomCodeAsync(RoomCode);
         if (game != null)
         {
             _gameId = game.Id;
-            // Find player name from the game's player list
             var player = game.Players.FirstOrDefault(p => p.Id == _playerId);
             if (player != null)
             {
@@ -355,15 +347,13 @@
                 _totalPoints = player.TotalPoints;
                 _correctCount = player.CorrectAnswers;
                 _wrongCount = player.WrongAnswers;
+                _fiftyFiftyUsed = player.FiftyFiftyUsed;
+                _skipUsed = player.SkipQuestionUsed;
+                _doubleDipUsed = player.DoubleDipUsed;
             }
         }
         
-        if (string.IsNullOrEmpty(_playerName))
-        {
-            NavigationManager.NavigateTo("/join");
-            return;
-        }
-        
+        if (string.IsNullOrEmpty(_playerName)) { NavigationManager.NavigateTo("/join"); return; }
         await SetupSignalR();
     }
 
@@ -381,16 +371,6 @@
                 var json = System.Text.Json.JsonSerializer.Serialize(players);
                 var arr = System.Text.Json.JsonDocument.Parse(json);
                 _playerCount = arr.RootElement.GetArrayLength();
-                
-                // Find player name (camelCase)
-                foreach (var player in arr.RootElement.EnumerateArray())
-                {
-                    if (player.GetProperty("id").GetString() == _playerId.ToString())
-                    {
-                        _playerName = player.GetProperty("playerName").GetString() ?? "";
-                        break;
-                    }
-                }
                 await InvokeAsync(StateHasChanged);
             }
             catch { }
@@ -398,8 +378,7 @@
 
         _hubConnection.On<int>("GameStarting", async (countdown) =>
         {
-            _gameStatus = "Starting";
-            _countdown = countdown;
+            _gameStatus = "Starting"; _countdown = countdown;
             await PlaySound("soundQuestion");
             await InvokeAsync(StateHasChanged);
         });
@@ -411,7 +390,6 @@
                 var json = System.Text.Json.JsonSerializer.Serialize(data);
                 var obj = System.Text.Json.JsonDocument.Parse(json);
                 
-                // All properties are camelCase from SignalR
                 _questionIndex = obj.RootElement.GetProperty("questionIndex").GetInt32();
                 _totalQuestions = obj.RootElement.GetProperty("totalQuestions").GetInt32();
                 _questionText = obj.RootElement.GetProperty("questionText").GetString() ?? "";
@@ -427,9 +405,9 @@
                     { "D", obj.RootElement.GetProperty("optionD").GetString() ?? "" }
                 };
                 
-                _selectedAnswer = null;
-                _hasAnswered = false;
-                _hiddenOptions.Clear();
+                _selectedAnswer = null; _hasAnswered = false; _skipped = false;
+                _wasCorrect = false; _pointsEarned = 0;
+                _hiddenOptions.Clear(); _doubleDipActive = false;
                 _gameStatus = "ShowingQuestion";
                 _questionStartTime = DateTime.UtcNow;
                 
@@ -451,42 +429,31 @@
                 _correctAnswer = obj.RootElement.GetProperty("correctAnswer").GetString();
                 _explanation = obj.RootElement.TryGetProperty("explanation", out var exp) ? exp.GetString() ?? "" : "";
                 
-                // Find my result - match by playerId (more reliable than name)
                 var myIdStr = _playerId.ToString();
                 var results = obj.RootElement.GetProperty("playerResults");
                 bool foundResult = false;
                 foreach (var result in results.EnumerateArray())
                 {
-                    var resultPlayerId = result.GetProperty("playerId").GetString();
-                    if (resultPlayerId == myIdStr)
+                    if (result.GetProperty("playerId").GetString() == myIdStr)
                     {
                         _wasCorrect = result.GetProperty("isCorrect").GetBoolean();
                         _pointsEarned = result.GetProperty("pointsEarned").GetInt32();
+                        _skipped = result.TryGetProperty("usedSkip", out var skip) && skip.GetBoolean();
                         _totalPoints += _pointsEarned;
-                        if (_wasCorrect) _correctCount++;
-                        else _wrongCount++;
+                        if (!_skipped) { if (_wasCorrect) _correctCount++; else _wrongCount++; }
                         foundResult = true;
                         break;
                     }
                 }
                 
-                // Fallback: if no result found, check if we answered correctly by comparing selected answer
                 if (!foundResult && _selectedAnswer != null && _correctAnswer != null)
-                {
                     _wasCorrect = _selectedAnswer == _correctAnswer;
-                    _pointsEarned = 0; // No points recorded
-                }
                 
                 await PlaySound(_wasCorrect ? "soundCorrect" : "soundWrong");
                 _gameStatus = "ShowingAnswer";
                 await InvokeAsync(StateHasChanged);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"AnswerRevealed error: {ex.Message}");
-                _gameStatus = "ShowingAnswer";
-                await InvokeAsync(StateHasChanged);
-            }
+            catch { _gameStatus = "ShowingAnswer"; await InvokeAsync(StateHasChanged); }
         });
 
         _hubConnection.On<object>("LeaderboardUpdated", async (data) =>
@@ -495,26 +462,21 @@
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(data);
                 var obj = System.Text.Json.JsonDocument.Parse(json);
-                
                 _leaderboard.Clear();
-                var leaderboard = obj.RootElement.GetProperty("leaderboard");
-                foreach (var entry in leaderboard.EnumerateArray())
+                foreach (var e in obj.RootElement.GetProperty("leaderboard").EnumerateArray())
                 {
-                    var lb = new LeaderboardEntry
+                    var lb = new LbEntry
                     {
-                        Rank = entry.GetProperty("rank").GetInt32(),
-                        PlayerName = entry.GetProperty("playerName").GetString() ?? "",
-                        TotalPoints = entry.GetProperty("totalPoints").GetInt32(),
-                        CorrectAnswers = entry.GetProperty("correctAnswers").GetInt32()
+                        Rank = e.GetProperty("rank").GetInt32(),
+                        PlayerId = Guid.Parse(e.GetProperty("id").GetString()!),
+                        PlayerName = e.GetProperty("playerName").GetString() ?? "",
+                        TotalPoints = e.GetProperty("totalPoints").GetInt32(),
+                        CorrectAnswers = e.GetProperty("correctAnswers").GetInt32(),
+                        TotalTimeTaken = e.GetProperty("totalTimeTaken").GetInt32()
                     };
                     _leaderboard.Add(lb);
-                    
-                    if (lb.PlayerName == _playerName)
-                    {
-                        _myRank = lb.Rank;
-                    }
+                    if (lb.PlayerId == _playerId) _myRank = lb.Rank;
                 }
-                
                 _gameStatus = "ShowingLeaderboard";
                 await InvokeAsync(StateHasChanged);
             }
@@ -527,26 +489,21 @@
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(data);
                 var obj = System.Text.Json.JsonDocument.Parse(json);
-                
                 _leaderboard.Clear();
-                var leaderboard = obj.RootElement.GetProperty("finalLeaderboard");
-                foreach (var entry in leaderboard.EnumerateArray())
+                foreach (var e in obj.RootElement.GetProperty("finalLeaderboard").EnumerateArray())
                 {
-                    var lb = new LeaderboardEntry
+                    var lb = new LbEntry
                     {
-                        Rank = entry.GetProperty("rank").GetInt32(),
-                        PlayerName = entry.GetProperty("playerName").GetString() ?? "",
-                        TotalPoints = entry.GetProperty("totalPoints").GetInt32(),
-                        CorrectAnswers = entry.GetProperty("correctAnswers").GetInt32()
+                        Rank = e.GetProperty("rank").GetInt32(),
+                        PlayerId = Guid.Parse(e.GetProperty("id").GetString()!),
+                        PlayerName = e.GetProperty("playerName").GetString() ?? "",
+                        TotalPoints = e.GetProperty("totalPoints").GetInt32(),
+                        CorrectAnswers = e.GetProperty("correctAnswers").GetInt32(),
+                        TotalTimeTaken = e.GetProperty("totalTimeTaken").GetInt32()
                     };
                     _leaderboard.Add(lb);
-                    
-                    if (lb.PlayerName == _playerName)
-                    {
-                        _myRank = lb.Rank;
-                    }
+                    if (lb.PlayerId == _playerId) _myRank = lb.Rank;
                 }
-                
                 await PlaySound(_myRank == 1 ? "soundWin" : "soundQuestion");
                 _gameStatus = "Finished";
                 await InvokeAsync(StateHasChanged);
@@ -554,10 +511,65 @@
             catch { }
         });
 
+        // Live leaderboard
+        _hubConnection.On<object>("LiveLeaderboard", async (data) =>
+        {
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                var arr = System.Text.Json.JsonDocument.Parse(json);
+                _liveLeaderboard.Clear();
+                foreach (var e in arr.RootElement.EnumerateArray())
+                {
+                    var lb = new LbEntry
+                    {
+                        Rank = e.GetProperty("rank").GetInt32(),
+                        PlayerId = Guid.Parse(e.GetProperty("id").GetString()!),
+                        PlayerName = e.GetProperty("playerName").GetString() ?? "",
+                        TotalPoints = e.GetProperty("totalPoints").GetInt32(),
+                        CorrectAnswers = e.GetProperty("correctAnswers").GetInt32(),
+                        WrongAnswers = e.GetProperty("wrongAnswers").GetInt32(),
+                        TotalTimeTaken = e.GetProperty("totalTimeTaken").GetInt32()
+                    };
+                    _liveLeaderboard.Add(lb);
+                    if (lb.PlayerId == _playerId) _myRank = lb.Rank;
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+            catch { }
+        });
+
+        // Lifeline responses
         _hubConnection.On<List<string>>("FiftyFiftyResult", async (hidden) =>
         {
             _hiddenOptions = hidden;
             await PlaySound("soundLifeline");
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On("QuestionSkipped", async () =>
+        {
+            _hasAnswered = true; _skipped = true;
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<object>("DoubleDipResult", async (data) =>
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(data);
+            var obj = System.Text.Json.JsonDocument.Parse(json);
+            var isCorrect = obj.RootElement.GetProperty("isCorrect").GetBoolean();
+            var answer = obj.RootElement.GetProperty("answer").GetString();
+            
+            if (isCorrect)
+            {
+                _hasAnswered = true;
+            }
+            else
+            {
+                if (answer != null) _hiddenOptions.Add(answer);
+                _selectedAnswer = null;
+                _doubleDipActive = false;
+            }
             await InvokeAsync(StateHasChanged);
         });
 
@@ -571,21 +583,12 @@
         _timer = new System.Threading.Timer(async _ =>
         {
             _timeRemaining--;
-            
-            if (_timeRemaining <= 5 && _timeRemaining > 0)
-            {
-                await PlaySound("soundTick");
-            }
-            
+            if (_timeRemaining <= 5 && _timeRemaining > 0) await PlaySound("soundTick");
             if (_timeRemaining <= 0)
             {
                 _timer?.Dispose();
-                if (!_hasAnswered)
-                {
-                    await SubmitAnswer(null);
-                }
+                if (!_hasAnswered) await SubmitAnswer(null);
             }
-            
             await InvokeAsync(StateHasChanged);
         }, null, 1000, 1000);
     }
@@ -599,6 +602,15 @@
     private async Task LockAnswer()
     {
         if (_selectedAnswer == null || _hasAnswered) return;
+        
+        if (_doubleDipActive)
+        {
+            // Double dip first attempt
+            if (_hubConnection != null && _gameId != Guid.Empty)
+                await _hubConnection.InvokeAsync("DoubleDipCheck", _gameId, _playerId, _selectedAnswer);
+            return;
+        }
+        
         await SubmitAnswer(_selectedAnswer);
     }
 
@@ -606,20 +618,10 @@
     {
         if (_hasAnswered) return;
         _hasAnswered = true;
-        
         var timeTaken = (int)(DateTime.UtcNow - _questionStartTime).TotalMilliseconds;
-        var usedLifeline = _hiddenOptions.Any();
-        
+        var usedLifeline = _hiddenOptions.Any() || _doubleDipUsed;
         if (_hubConnection != null && _gameId != Guid.Empty)
-        {
-            await _hubConnection.InvokeAsync("SubmitAnswer", 
-                _gameId, 
-                _playerId, 
-                answer, 
-                timeTaken, 
-                usedLifeline);
-        }
-        
+            await _hubConnection.InvokeAsync("SubmitAnswer", _gameId, _playerId, answer, timeTaken, usedLifeline);
         StateHasChanged();
     }
 
@@ -627,37 +629,45 @@
     {
         if (_fiftyFiftyUsed || _hasAnswered) return;
         _fiftyFiftyUsed = true;
-        
         if (_hubConnection != null && _gameId != Guid.Empty)
-        {
             await _hubConnection.InvokeAsync("UseFiftyFifty", _gameId, _playerId);
-        }
     }
 
-    private async Task PlaySound(string soundId)
+    private async Task UseSkipQuestion()
+    {
+        if (_skipUsed || _hasAnswered) return;
+        _skipUsed = true;
+        if (_hubConnection != null && _gameId != Guid.Empty)
+            await _hubConnection.InvokeAsync("SkipQuestion", _gameId, _playerId);
+    }
+
+    private void UseDoubleDip()
+    {
+        if (_doubleDipUsed || _hasAnswered) return;
+        _doubleDipUsed = true;
+        _doubleDipActive = true;
+    }
+
+    private async Task PlaySound(string id)
     {
         if (!_soundEnabled) return;
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{soundId}')?.play()");
-        }
-        catch { }
+        try { await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{id}')?.play()"); } catch { }
     }
 
     public async ValueTask DisposeAsync()
     {
         _timer?.Dispose();
-        if (_hubConnection != null)
-        {
-            await _hubConnection.DisposeAsync();
-        }
+        if (_hubConnection != null) await _hubConnection.DisposeAsync();
     }
     
-    private class LeaderboardEntry
+    private class LbEntry
     {
         public int Rank { get; set; }
+        public Guid PlayerId { get; set; }
         public string PlayerName { get; set; } = "";
         public int TotalPoints { get; set; }
         public int CorrectAnswers { get; set; }
+        public int WrongAnswers { get; set; }
+        public int TotalTimeTaken { get; set; }
     }
 }
