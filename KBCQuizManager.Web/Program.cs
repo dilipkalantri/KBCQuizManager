@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.ResponseCompression;
 using MudBlazor.Services;
 using KBCQuizManager.Web.Data;
 using KBCQuizManager.Web.Data.Entities;
 using KBCQuizManager.Web.Data.Services;
 using KBCQuizManager.Web.Components;
+using KBCQuizManager.Web.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,14 @@ builder.Services.AddRazorComponents()
 
 // Add Controllers for authentication
 builder.Services.AddControllers();
+
+// Add SignalR
+builder.Services.AddSignalR();
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/octet-stream" });
+});
 
 // Add MudBlazor
 builder.Services.AddMudServices(config =>
@@ -75,6 +85,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<IGameService, GameService>();
+builder.Services.AddScoped<IMultiplayerService, MultiplayerService>();
 builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 
 var app = builder.Build();
@@ -93,6 +104,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseResponseCompression();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
@@ -101,6 +113,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map SignalR hub
+app.MapHub<MultiplayerHub>("/hubs/multiplayer");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

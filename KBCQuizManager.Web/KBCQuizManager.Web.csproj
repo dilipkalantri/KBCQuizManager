@@ -23,6 +23,9 @@
     <!-- Identity -->
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.2" />
     
+    <!-- SignalR Client -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.2" />
+    
     <!-- MudBlazor for Modern UI -->
     <PackageReference Include="MudBlazor" Version="6.19.1" />
     

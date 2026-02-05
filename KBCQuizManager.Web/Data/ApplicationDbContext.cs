@@ -17,6 +17,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<GameSession> GameSessions => Set<GameSession>();
     public DbSet<GameSessionAnswer> GameSessionAnswers => Set<GameSessionAnswer>();
     
+    // Multiplayer
+    public DbSet<MultiplayerGame> MultiplayerGames => Set<MultiplayerGame>();
+    public DbSet<MultiplayerPlayer> MultiplayerPlayers => Set<MultiplayerPlayer>();
+    public DbSet<MultiplayerAnswer> MultiplayerAnswers => Set<MultiplayerAnswer>();
+    
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -123,6 +128,60 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.GameSessionId);
             
+            entity.HasOne(a => a.Question)
+                .WithMany()
+                .HasForeignKey(a => a.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        
+        // Multiplayer Game configuration
+        builder.Entity<MultiplayerGame>(entity =>
+        {
+            entity.ToTable("MultiplayerGames");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.RoomCode).IsUnique();
+            entity.HasIndex(e => e.HostId);
+            entity.HasIndex(e => e.Status);
+            
+            entity.HasOne(g => g.Host)
+                .WithMany()
+                .HasForeignKey(g => g.HostId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasMany(g => g.Players)
+                .WithOne(p => p.Game)
+                .HasForeignKey(p => p.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasMany(g => g.Answers)
+                .WithOne(a => a.Game)
+                .HasForeignKey(a => a.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        // Multiplayer Player configuration
+        builder.Entity<MultiplayerPlayer>(entity =>
+        {
+            entity.ToTable("MultiplayerPlayers");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.GameId);
+            entity.HasIndex(e => new { e.GameId, e.PlayerName }).IsUnique();
+        });
+        
+        // Multiplayer Answer configuration
+        builder.Entity<MultiplayerAnswer>(entity =>
+        {
+            entity.ToTable("MultiplayerAnswers");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.GameId);
+            entity.HasIndex(e => e.PlayerId);
+            entity.HasIndex(e => new { e.GameId, e.PlayerId, e.QuestionIndex }).IsUnique();
+            
+            entity.HasOne(a => a.Player)
+                .WithMany()
+                .HasForeignKey(a => a.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
             entity.HasOne(a => a.Question)
                 .WithMany()
                 .HasForeignKey(a => a.QuestionId)

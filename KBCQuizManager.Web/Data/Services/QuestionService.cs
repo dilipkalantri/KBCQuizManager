@@ -9,6 +9,7 @@ public interface IQuestionService
     Task<List<Question>> GetQuestionsAsync(Guid ownerId, Guid? categoryId = null, int? level = null);
     Task<List<Question>> GetAllQuestionsAsync();
     Task<Question?> GetQuestionByIdAsync(Guid id, Guid ownerId);
+    Task<Question?> GetByIdAsync(Guid id);
     Task<(bool Success, string Message)> CreateQuestionAsync(Question question);
     Task<(bool Success, string Message)> UpdateQuestionAsync(Question question, Guid ownerId);
     Task<(bool Success, string Message)> DeleteQuestionAsync(Guid id, Guid ownerId);
@@ -63,6 +64,14 @@ public class QuestionService : IQuestionService
         return await _context.Questions
             .Include(q => q.Category)
             .FirstOrDefaultAsync(q => q.Id == id && q.OwnerId == ownerId);
+    }
+    
+    public async Task<Question?> GetByIdAsync(Guid id)
+    {
+        return await _context.Questions
+            .AsNoTracking()
+            .Include(q => q.Category)
+            .FirstOrDefaultAsync(q => q.Id == id);
     }
     
     public async Task<(bool Success, string Message)> CreateQuestionAsync(Question question)

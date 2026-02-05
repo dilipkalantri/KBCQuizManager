@@ -1,0 +1,228 @@
+@page "/join"
+@page "/join/{RoomCode}"
+@layout EmptyLayout
+@inject IMultiplayerService MultiplayerService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Join Game - KBC Quiz</PageTitle>
+
+<div style="min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <div style="max-width: 450px; width: 100%;">
+        <!-- Logo -->
+        <div style="text-align: center; margin-bottom: 40px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 40px; color: white; font-weight: bold; box-shadow: 0 10px 40px rgba(124, 58, 237, 0.3);">K</div>
+            <h1 style="color: white; font-size: 28px; margin: 0;">KBC Quiz</h1>
+            <p style="color: #9ca3af; margin: 5px 0 0 0;">Multiplayer Game</p>
+        </div>
+        
+        @if (_error != null)
+        {
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 10px; padding: 15px; margin-bottom: 20px; color: #ef4444; text-align: center;">
+                @_error
+            </div>
+        }
+        
+        @if (!_joined)
+        {
+            <!-- Join Form -->
+            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 16px; padding: 30px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+                <h2 style="color: white; margin: 0 0 25px 0; text-align: center;">Join Game</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Room Code</label>
+                    <input @bind="_roomCode" @bind:event="oninput" placeholder="Enter 6-digit code" maxlength="6"
+                           style="width: 100%; padding: 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 10px; color: white; font-size: 24px; text-align: center; letter-spacing: 8px; text-transform: uppercase;" />
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="color: #9ca3af; font-size: 14px; display: block; margin-bottom: 8px;">Your Name</label>
+                    <input @bind="_playerName" placeholder="Enter your name" maxlength="30"
+                           style="width: 100%; padding: 15px; background: #1a1a2e; border: 1px solid #2a3f5f; border-radius: 10px; color: white; font-size: 16px;" />
+                </div>
+                
+                <button @onclick="JoinGameRoom" disabled="@(string.IsNullOrWhiteSpace(_roomCode) || string.IsNullOrWhiteSpace(_playerName) || _isJoining)"
+                        style="width: 100%; padding: 16px; background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer; opacity: @(string.IsNullOrWhiteSpace(_roomCode) || string.IsNullOrWhiteSpace(_playerName) || _isJoining ? "0.5" : "1"); transition: transform 0.2s;">
+                    @(_isJoining ? "Joining..." : "🎮 Join Game")
+                </button>
+            </div>
+        }
+        else
+        {
+            <!-- Waiting Room -->
+            <div style="background: #16213e; border: 1px solid #2a3f5f; border-radius: 16px; padding: 30px; text-align: center;">
+                <div style="font-size: 60px; margin-bottom: 15px;">✅</div>
+                <h2 style="color: white; margin: 0 0 10px 0;">Joined Successfully!</h2>
+                <p style="color: #9ca3af; margin: 0 0 5px 0;">Welcome, <strong style="color: #7c3aed;">@_playerName</strong></p>
+                <p style="color: #9ca3af; margin: 0 0 25px 0;">Game: <strong style="color: white;">@_gameName</strong></p>
+                
+                <div style="background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+                    <p style="color: #6b7280; margin: 0 0 10px 0; font-size: 14px;">Players in Lobby</p>
+                    <div style="font-size: 48px; color: #7c3aed; font-weight: 700;">@_playerCount</div>
+                </div>
+                
+                @if (_gameStatus == "Waiting")
+                {
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; color: #9ca3af;">
+                        <div class="waiting-dot"></div>
+                        <span>Waiting for host to start the game...</span>
+                    </div>
+                }
+                else if (_gameStatus == "Starting")
+                {
+                    <div style="font-size: 80px; color: #fbbf24; font-weight: 700; animation: pulse 1s infinite;">@_countdown</div>
+                    <p style="color: #fbbf24; margin: 0;">Get Ready!</p>
+                }
+            </div>
+        }
+        
+        <style>
+            .waiting-dot {
+                width: 8px;
+                height: 8px;
+                background: #7c3aed;
+                border-radius: 50%;
+                animation: pulse 1.5s infinite;
+            }
+            @@keyframes pulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.5; transform: scale(0.8); }
+            }
+        </style>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? RoomCode { get; set; }
+    
+    private string _roomCode = "";
+    private string _playerName = "";
+    private string? _error;
+    private bool _isJoining = false;
+    private bool _joined = false;
+    
+    private Guid _playerId;
+    private Guid _gameId;
+    private string _gameName = "";
+    private int _playerCount = 0;
+    private string _gameStatus = "Waiting";
+    private int _countdown = 3;
+    
+    private HubConnection? _hubConnection;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(RoomCode))
+        {
+            _roomCode = RoomCode.ToUpper();
+        }
+    }
+
+    private async Task JoinGameRoom()
+    {
+        if (string.IsNullOrWhiteSpace(_roomCode) || string.IsNullOrWhiteSpace(_playerName)) return;
+        
+        _isJoining = true;
+        _error = null;
+        
+        try
+        {
+            // Verify room exists first
+            var game = await MultiplayerService.GetGameByRoomCodeAsync(_roomCode);
+            if (game == null)
+            {
+                _error = "Room not found. Please check the code and try again.";
+                _isJoining = false;
+                return;
+            }
+            
+            if (game.Status != MultiplayerGameStatus.Waiting)
+            {
+                _error = "This game has already started.";
+                _isJoining = false;
+                return;
+            }
+            
+            if (game.Players.Count >= game.MaxPlayers)
+            {
+                _error = "Room is full. Maximum players reached.";
+                _isJoining = false;
+                return;
+            }
+            
+            _gameName = game.GameName;
+            _gameId = game.Id;
+            
+            // Setup SignalR connection
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/multiplayer"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            // Setup event handlers
+            _hubConnection.On<object>("JoinedRoom", async (data) =>
+            {
+                try
+                {
+                    var json = System.Text.Json.JsonSerializer.Serialize(data);
+                    var obj = System.Text.Json.JsonDocument.Parse(json);
+                    // SignalR uses camelCase by default
+                    _playerId = Guid.Parse(obj.RootElement.GetProperty("playerId").GetString()!);
+                    _joined = true;
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch (Exception ex)
+                {
+                    _error = $"Parse error: {ex.Message}";
+                    _isJoining = false;
+                    await InvokeAsync(StateHasChanged);
+                }
+            });
+            
+            _hubConnection.On<string>("Error", async (message) =>
+            {
+                _error = message;
+                _isJoining = false;
+                await InvokeAsync(StateHasChanged);
+            });
+            
+            _hubConnection.On<object>("PlayerListUpdated", async (players) =>
+            {
+                try
+                {
+                    var json = System.Text.Json.JsonSerializer.Serialize(players);
+                    var arr = System.Text.Json.JsonDocument.Parse(json);
+                    _playerCount = arr.RootElement.GetArrayLength();
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch { }
+            });
+            
+            _hubConnection.On<int>("GameStarting", async (countdown) =>
+            {
+                _gameStatus = "Starting";
+                _countdown = countdown;
+                await InvokeAsync(StateHasChanged);
+                
+                // Start countdown
+                for (int i = countdown; i >= 0; i--)
+                {
+                    _countdown = i;
+                    await InvokeAsync(StateHasChanged);
+                    if (i > 0) await Task.Delay(1000);
+                }
+                
+                // Navigate to game
+                NavigationManager.NavigateTo($"/play/{_roomCode}?playerId={_playerId}");
+            });
+
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("JoinRoom", _roomCode.ToUpper(), _playerName);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Connection failed: {ex.Message}";
+            _isJoining = false;
+        }
+    }
+}
