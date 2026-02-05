@@ -55,6 +55,7 @@ public class MultiplayerService : IMultiplayerService
     {
         try
         {
+            _context.ChangeTracker.Clear();
             return await _context.MultiplayerGames
                 .Include(g => g.Players)
                 .Include(g => g.Host)
@@ -71,6 +72,7 @@ public class MultiplayerService : IMultiplayerService
     {
         try
         {
+            _context.ChangeTracker.Clear();
             return await _context.MultiplayerGames
                 .Include(g => g.Players)
                 .Include(g => g.Host)

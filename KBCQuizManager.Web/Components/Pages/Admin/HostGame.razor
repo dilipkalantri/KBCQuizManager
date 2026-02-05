@@ -504,7 +504,7 @@ else
 
     private async Task StartGame()
     {
-        if (_hubConnection == null || _currentGame == null) return;
+        if (_hubConnection == null || _currentGame == null || _players.Count < 1) return;
         
         try
         {
@@ -549,20 +549,30 @@ else
             _answerDistribution.Clear();
             await _hubConnection.InvokeAsync("ShowNextQuestion", _currentGame.Id);
             
-            // Refresh game state
+            // Wait a moment for the hub to save to DB
+            await Task.Delay(300);
+            
+            // Refresh game state from database
             _currentGame = await MultiplayerService.GetGameByIdAsync(_currentGame.Id);
-            _players = _currentGame?.Players.ToList() ?? new();
+            if (_currentGame == null) return;
+            _players = _currentGame.Players.ToList();
             
             // Load current question
-            if (_currentGame?.CurrentQuestionId != null)
+            if (_currentGame.CurrentQuestionId != null)
             {
                 _currentQuestion = await QuestionService.GetByIdAsync(_currentGame.CurrentQuestionId.Value);
+            }
+            
+            if (_currentQuestion == null)
+            {
+                Snackbar.Add("Failed to load question", Severity.Error);
+                return;
             }
             
             await PlaySound("soundQuestion");
             
             // Start question timer
-            _timeRemaining = _currentGame?.TimePerQuestion ?? 30;
+            _timeRemaining = _currentGame.TimePerQuestion;
             _timer?.Dispose();
             _timer = new System.Threading.Timer(async _ =>
             {
@@ -578,7 +588,7 @@ else
                 await InvokeAsync(StateHasChanged);
             }, null, 1000, 1000);
             
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
@@ -597,27 +607,17 @@ else
             await _hubConnection.InvokeAsync("RevealAnswer", _currentGame.Id);
             _currentGame.Status = MultiplayerGameStatus.ShowingAnswer;
             
-            // Calculate answer distribution
-            var answers = await GetAnswersForCurrentQuestion();
-            _answerDistribution = answers
-                .Where(a => a.SelectedAnswer.HasValue)
-                .GroupBy(a => a.SelectedAnswer!.Value.ToString())
-                .ToDictionary(g => g.Key, g => g.Count());
+            // Refresh players to get updated stats
+            _currentGame = await MultiplayerService.GetGameByIdAsync(_currentGame.Id);
+            _players = _currentGame?.Players.ToList() ?? new();
             
-            await PlaySound(_answerDistribution.Any(a => a.Key == _currentQuestion?.CorrectAnswer.ToString()) ? "soundCorrect" : "soundWrong");
-            
-            StateHasChanged();
+            await PlaySound("soundCorrect");
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error revealing answer: {ex.Message}", Severity.Error);
         }
-    }
-
-    private async Task<List<MultiplayerAnswer>> GetAnswersForCurrentQuestion()
-    {
-        // This would normally be a service call
-        return new List<MultiplayerAnswer>();
     }
 
     private async Task ShowLeaderboard()
@@ -629,7 +629,7 @@ else
             await _hubConnection.InvokeAsync("ShowLeaderboard", _currentGame.Id);
             _leaderboard = await MultiplayerService.GetLeaderboardAsync(_currentGame.Id);
             _currentGame.Status = MultiplayerGameStatus.ShowingLeaderboard;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
@@ -647,7 +647,7 @@ else
             _leaderboard = await MultiplayerService.GetLeaderboardAsync(_currentGame.Id);
             _currentGame.Status = MultiplayerGameStatus.Finished;
             await PlaySound("soundWin");
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
