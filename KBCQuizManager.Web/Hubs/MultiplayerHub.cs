@@ -202,14 +202,18 @@ public class MultiplayerHub : Hub
     {
         _context.ChangeTracker.Clear();
         
+        _logger.LogInformation("SubmitAnswer called: gameId={GameId}, playerId={PlayerId}, answer={Answer}", gameId, playerId, answer);
+        
         var game = await _context.MultiplayerGames.FirstOrDefaultAsync(g => g.Id == gameId);
-        if (game == null || game.Status != MultiplayerGameStatus.ShowingQuestion) return;
+        if (game == null) { _logger.LogWarning("SubmitAnswer: game not found"); return; }
+        if (game.Status != MultiplayerGameStatus.ShowingQuestion) { _logger.LogWarning("SubmitAnswer: game status is {Status}, not ShowingQuestion", game.Status); return; }
 
         var player = await _context.MultiplayerPlayers.FirstOrDefaultAsync(p => p.Id == playerId);
-        if (player == null || player.HasAnsweredCurrent) return;
+        if (player == null) { _logger.LogWarning("SubmitAnswer: player not found"); return; }
+        if (player.HasAnsweredCurrent) { _logger.LogWarning("SubmitAnswer: player already answered"); return; }
 
         var question = await _context.Questions.AsNoTracking().FirstOrDefaultAsync(q => q.Id == game.CurrentQuestionId);
-        if (question == null) return;
+        if (question == null) { _logger.LogWarning("SubmitAnswer: question not found"); return; }
 
         CorrectOption? selectedOption = answer?.ToUpper() switch
         {
@@ -221,6 +225,8 @@ public class MultiplayerHub : Hub
         };
 
         bool isCorrect = selectedOption.HasValue && selectedOption.Value == question.CorrectAnswer;
+        _logger.LogInformation("SubmitAnswer: selected={Selected}, correct={Correct}, isCorrect={IsCorrect}", selectedOption, question.CorrectAnswer, isCorrect);
+        
         int points = MultiplayerPoints.CalculatePoints(
             game.CurrentQuestionIndex,
             timeTakenMs,
@@ -290,12 +296,15 @@ public class MultiplayerHub : Hub
             .Where(a => a.GameId == gameId && a.QuestionIndex == game.CurrentQuestionIndex)
             .ToListAsync();
 
+        _logger.LogInformation("RevealAnswer: Found {Count} answers for question index {Index}", answers.Count, game.CurrentQuestionIndex);
+
         var answerStats = new
         {
             CorrectAnswer = question.CorrectAnswer.ToString(),
             Explanation = question.Explanation,
             PlayerResults = answers.Select(a => new
             {
+                PlayerId = a.PlayerId,
                 PlayerName = a.Player.PlayerName,
                 SelectedAnswer = a.SelectedAnswer?.ToString(),
                 IsCorrect = a.IsCorrect,

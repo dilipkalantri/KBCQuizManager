@@ -342,11 +342,26 @@
             return;
         }
         
-        // Get game ID from room code
+        // Get game ID and player name from database
         var game = await MultiplayerService.GetGameByRoomCodeAsync(RoomCode);
         if (game != null)
         {
             _gameId = game.Id;
+            // Find player name from the game's player list
+            var player = game.Players.FirstOrDefault(p => p.Id == _playerId);
+            if (player != null)
+            {
+                _playerName = player.PlayerName;
+                _totalPoints = player.TotalPoints;
+                _correctCount = player.CorrectAnswers;
+                _wrongCount = player.WrongAnswers;
+            }
+        }
+        
+        if (string.IsNullOrEmpty(_playerName))
+        {
+            NavigationManager.NavigateTo("/join");
+            return;
         }
         
         await SetupSignalR();
@@ -436,26 +451,42 @@
                 _correctAnswer = obj.RootElement.GetProperty("correctAnswer").GetString();
                 _explanation = obj.RootElement.TryGetProperty("explanation", out var exp) ? exp.GetString() ?? "" : "";
                 
-                // Find my result
+                // Find my result - match by playerId (more reliable than name)
+                var myIdStr = _playerId.ToString();
                 var results = obj.RootElement.GetProperty("playerResults");
+                bool foundResult = false;
                 foreach (var result in results.EnumerateArray())
                 {
-                    if (result.GetProperty("playerName").GetString() == _playerName)
+                    var resultPlayerId = result.GetProperty("playerId").GetString();
+                    if (resultPlayerId == myIdStr)
                     {
                         _wasCorrect = result.GetProperty("isCorrect").GetBoolean();
                         _pointsEarned = result.GetProperty("pointsEarned").GetInt32();
                         _totalPoints += _pointsEarned;
                         if (_wasCorrect) _correctCount++;
                         else _wrongCount++;
+                        foundResult = true;
                         break;
                     }
+                }
+                
+                // Fallback: if no result found, check if we answered correctly by comparing selected answer
+                if (!foundResult && _selectedAnswer != null && _correctAnswer != null)
+                {
+                    _wasCorrect = _selectedAnswer == _correctAnswer;
+                    _pointsEarned = 0; // No points recorded
                 }
                 
                 await PlaySound(_wasCorrect ? "soundCorrect" : "soundWrong");
                 _gameStatus = "ShowingAnswer";
                 await InvokeAsync(StateHasChanged);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AnswerRevealed error: {ex.Message}");
+                _gameStatus = "ShowingAnswer";
+                await InvokeAsync(StateHasChanged);
+            }
         });
 
         _hubConnection.On<object>("LeaderboardUpdated", async (data) =>
