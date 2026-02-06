@@ -9,6 +9,7 @@ public interface ICategoryService
     Task<List<Category>> GetAllCategoriesAsync(); // For SuperAdmin
     Task<Category?> GetCategoryByIdAsync(Guid id, Guid ownerId);
     Task<(bool Success, string Message)> CreateCategoryAsync(Category category);
+    Task<(bool Success, string Message, Category? Category)> CreateCategoryWithReturnAsync(Category category);
     Task<(bool Success, string Message)> UpdateCategoryAsync(Category category, Guid ownerId);
     Task<(bool Success, string Message)> DeleteCategoryAsync(Guid id, Guid ownerId);
     Task<(bool Success, string Message)> ToggleCategoryStatusAsync(Guid id, Guid ownerId);
@@ -64,6 +65,22 @@ public class CategoryService : ICategoryService
         await _context.SaveChangesAsync();
         
         return (true, "Category created successfully");
+    }
+    
+    public async Task<(bool Success, string Message, Category? Category)> CreateCategoryWithReturnAsync(Category category)
+    {
+        // Check for duplicate name within the same owner
+        var exists = await CategoryExistsAsync(category.Name, category.OwnerId);
+        if (exists)
+            return (false, "A category with this name already exists", null);
+        
+        category.Id = Guid.NewGuid();
+        category.CreatedAt = DateTime.UtcNow;
+        
+        _context.Categories.Add(category);
+        await _context.SaveChangesAsync();
+        
+        return (true, "Category created successfully", category);
     }
     
     public async Task<(bool Success, string Message)> UpdateCategoryAsync(Category category, Guid ownerId)

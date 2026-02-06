@@ -11,6 +11,7 @@ public interface IQuestionService
     Task<Question?> GetQuestionByIdAsync(Guid id, Guid ownerId);
     Task<Question?> GetByIdAsync(Guid id);
     Task<(bool Success, string Message)> CreateQuestionAsync(Question question);
+    Task<(bool Success, string Message, Question? Question)> CreateQuestionWithReturnAsync(Question question);
     Task<(bool Success, string Message)> UpdateQuestionAsync(Question question, Guid ownerId);
     Task<(bool Success, string Message)> DeleteQuestionAsync(Guid id, Guid ownerId);
     Task<(bool Success, string Message)> ToggleQuestionStatusAsync(Guid id, Guid ownerId);
@@ -94,6 +95,28 @@ public class QuestionService : IQuestionService
         await _context.SaveChangesAsync();
         
         return (true, "Question created successfully");
+    }
+    
+    public async Task<(bool Success, string Message, Question? Question)> CreateQuestionWithReturnAsync(Question question)
+    {
+        var categoryExists = await _context.Categories
+            .AnyAsync(c => c.Id == question.CategoryId && c.OwnerId == question.OwnerId);
+            
+        if (!categoryExists)
+            return (false, "Invalid category selected", null);
+        
+        // Validate level
+        if (question.Level < 1 || question.Level > 15)
+            question.Level = 1;
+        
+        question.Id = Guid.NewGuid();
+        question.CreatedAt = DateTime.UtcNow;
+        question.TimeLimitSeconds = question.GetTimeLimitForLevel();
+        
+        _context.Questions.Add(question);
+        await _context.SaveChangesAsync();
+        
+        return (true, "Question created successfully", question);
     }
     
     public async Task<(bool Success, string Message)> UpdateQuestionAsync(Question question, Guid ownerId)

@@ -163,12 +163,14 @@ else
             return;
         }
 
-        var (success, message) = await UserService.CreateAdminAsync(_newAdmin, _password, _currentUser!.Id);
-        if (success)
+        var (success, message, createdUser) = await UserService.CreateAdminWithReturnAsync(_newAdmin, _password, _currentUser!.Id);
+        if (success && createdUser != null)
         {
-            Snackbar.Add(message, Severity.Success);
+            // Snackbar.Add(message, Severity.Success);
+            // Add the created admin directly to the list
+            _admins.Add(createdUser);
+            StateHasChanged();
             CloseDialog();
-            await LoadAdmins();
         }
         else
         {
@@ -181,7 +183,7 @@ else
         if (!string.IsNullOrEmpty(code))
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", code);
-            Snackbar.Add("Admin code copied!", Severity.Info);
+            // Snackbar.Add("Admin code copied!", Severity.Info);
         }
     }
 
@@ -191,7 +193,7 @@ else
         if (confirm == true)
         {
             var (success, message) = await UserService.RegenerateAdminCodeAsync(admin.Id);
-            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (!success) Snackbar.Add(message, Severity.Error);
             if (success) await LoadAdmins();
         }
     }
@@ -199,7 +201,7 @@ else
     private async Task ToggleAdminStatus(ApplicationUser admin)
     {
         var (success, message) = await UserService.ToggleUserStatusAsync(admin.Id);
-        Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+        if (!success) Snackbar.Add(message, Severity.Error);
         if (success) await LoadAdmins();
     }
 
@@ -209,7 +211,7 @@ else
         if (confirm == true)
         {
             var (success, message) = await UserService.DeleteUserAsync(admin.Id);
-            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (!success) Snackbar.Add(message, Severity.Error);
             if (success) await LoadAdmins();
         }
     }

@@ -309,11 +309,43 @@ else
     {
         if (string.IsNullOrWhiteSpace(_editingQuestion.QuestionText)) return;
         _editingQuestion.OwnerId = _currentUser!.Id;
-        var (success, message) = _isEditMode
-            ? await QuestionService.UpdateQuestionAsync(_editingQuestion, _currentUser.Id)
-            : await QuestionService.CreateQuestionAsync(_editingQuestion);
-        Snackbar.Add(message, success ? Severity.Success : Severity.Error);
-        if (success) { CloseDialog(); await LoadData(); }
+        
+        if (_isEditMode)
+        {
+            var (success, message) = await QuestionService.UpdateQuestionAsync(_editingQuestion, _currentUser.Id);
+            if (!success) Snackbar.Add(message, Severity.Error);
+            if (success)
+            {
+                // Update the existing question in the list
+                var existingIndex = _questions.FindIndex(q => q.Id == _editingQuestion.Id);
+                if (existingIndex >= 0)
+                {
+                    _questions[existingIndex] = _editingQuestion;
+                    // Update level counts
+                    _levelCounts[_editingQuestion.Level] = _questions.Count(q => q.Level == _editingQuestion.Level);
+                    StateHasChanged();
+                }
+                CloseDialog();
+            }
+        }
+        else
+        {
+            // Create a new question
+            var (success, message, createdQuestion) = await QuestionService.CreateQuestionWithReturnAsync(_editingQuestion);
+            if (!success) Snackbar.Add(message, Severity.Error);
+            if (success && createdQuestion != null)
+            {
+                // Add the new question to the list
+                _questions.Add(createdQuestion);
+                // Update level counts
+                if (_levelCounts.ContainsKey(createdQuestion.Level))
+                    _levelCounts[createdQuestion.Level]++;
+                else
+                    _levelCounts[createdQuestion.Level] = 1;
+                StateHasChanged();
+                CloseDialog();
+            }
+        }
     }
 
     private async Task DeleteQuestion(Question q)
@@ -322,7 +354,7 @@ else
         if (confirm == true)
         {
             var (success, message) = await QuestionService.DeleteQuestionAsync(q.Id, _currentUser!.Id);
-            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (!success) Snackbar.Add(message, Severity.Error);
             if (success) await LoadData();
         }
     }

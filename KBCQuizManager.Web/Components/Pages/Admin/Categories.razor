@@ -3,6 +3,7 @@
 @inject ICategoryService CategoryService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Categories - InternsHub</PageTitle>
 
@@ -154,15 +155,38 @@ else
         if (string.IsNullOrWhiteSpace(_editingCategory.Name)) return;
 
         _editingCategory.OwnerId = _currentUser!.Id;
-        var (success, message) = _isEditMode
-            ? await CategoryService.UpdateCategoryAsync(_editingCategory, _currentUser.Id)
-            : await CategoryService.CreateCategoryAsync(_editingCategory);
-
-        Snackbar.Add(message, success ? Severity.Success : Severity.Error);
-        if (success)
+        
+        if (_isEditMode)
         {
-            CloseDialog();
-            await LoadCategories();
+            var (success, message) = await CategoryService.UpdateCategoryAsync(_editingCategory, _currentUser.Id);
+            
+            if (!success) Snackbar.Add(message, Severity.Error);
+            if (success)
+            {
+                // Update the existing category in the list
+                var existingIndex = _categories.FindIndex(c => c.Id == _editingCategory.Id);
+                if (existingIndex >= 0)
+                {
+                    _categories[existingIndex] = _editingCategory;
+                    StateHasChanged(); // Update UI immediately for edit
+                }
+                
+                CloseDialog();
+            }
+        }
+        else
+        {
+            // Create a new category
+            var (success, message, createdCategory) = await CategoryService.CreateCategoryWithReturnAsync(_editingCategory);
+            
+            if (!success) Snackbar.Add(message, Severity.Error);
+            if (success && createdCategory != null)
+            {
+                // Add the created category directly to the list instead of reloading all categories
+                _categories.Add(createdCategory);
+                StateHasChanged(); // Update UI immediately
+                CloseDialog();
+            }
         }
     }
 
@@ -172,7 +196,7 @@ else
         if (confirm == true)
         {
             var (success, message) = await CategoryService.DeleteCategoryAsync(category.Id, _currentUser!.Id);
-            Snackbar.Add(message, success ? Severity.Success : Severity.Error);
+            if (!success) Snackbar.Add(message, Severity.Error);
             if (success) await LoadCategories();
         }
     }

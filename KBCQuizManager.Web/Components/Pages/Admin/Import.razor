@@ -261,7 +261,7 @@
         
         var (success, failed, message) = await QuestionService.ImportQuestionsFromJsonAsync(json, _selectedCategoryId, _currentUser!.Id);
         
-        Snackbar.Add(message, success > 0 ? Severity.Success : Severity.Error);
+        if (success == 0) Snackbar.Add(message, Severity.Error);
         _isImporting = false;
         
         if (success > 0)

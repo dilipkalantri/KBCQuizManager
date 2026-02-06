@@ -68,7 +68,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendVerificationEmailAsync(string toEmail, string firstName, string verificationUrl)
     {
-        var subject = "Verify Your Email - KBC Quiz Manager";
+        var subject = "Verify Your Email - InternsHub ";
         var body = $@"
 <!DOCTYPE html>
 <html>
@@ -85,11 +85,11 @@ public class EmailService : IEmailService
 <body>
     <div class=""container"">
         <div class=""header"">
-            <h1>KBC Quiz Manager</h1>
+            <h1>InternsHub Admin</h1>
         </div>
         <div class=""content"">
             <h2>Hello {firstName}!</h2>
-            <p>Thank you for registering with KBC Quiz Manager. Please verify your email address by clicking the button below:</p>
+            <p>Thank you for registering with Internshub. Please verify your email address by clicking the button below:</p>
             <p style=""text-align: center;"">
                 <a href=""{verificationUrl}"" class=""button"">Verify Email Address</a>
             </p>
@@ -99,7 +99,7 @@ public class EmailService : IEmailService
             <p>If you did not create an account, please ignore this email.</p>
         </div>
         <div class=""footer"">
-            <p>&copy; {DateTime.Now.Year} KBC Quiz Manager. All rights reserved.</p>
+            <p>&copy; {DateTime.Now.Year} Antargyan.com. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -110,7 +110,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendPasswordResetEmailAsync(string toEmail, string firstName, string resetUrl)
     {
-        var subject = "Reset Your Password - KBC Quiz Manager";
+        var subject = "Reset Your Password - InternsHub";
         var body = $@"
 <!DOCTYPE html>
 <html>
@@ -128,7 +128,7 @@ public class EmailService : IEmailService
 <body>
     <div class=""container"">
         <div class=""header"">
-            <h1>KBC Quiz Manager</h1>
+            <h1>InternsHub Admin</h1>
         </div>
         <div class=""content"">
             <h2>Hello {firstName}!</h2>
@@ -143,7 +143,7 @@ public class EmailService : IEmailService
             </div>
         </div>
         <div class=""footer"">
-            <p>&copy; {DateTime.Now.Year} KBC Quiz Manager. All rights reserved.</p>
+            <p>&copy; {DateTime.Now.Year} Antargyan.com. All rights reserved.</p>
         </div>
     </div>
 </body>

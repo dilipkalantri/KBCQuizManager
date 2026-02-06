@@ -9,6 +9,7 @@ public interface IUserService
     Task<List<ApplicationUser>> GetAllAdminsAsync();
     Task<ApplicationUser?> GetUserByIdAsync(Guid id);
     Task<(bool Success, string Message)> CreateAdminAsync(ApplicationUser user, string password, Guid createdById);
+    Task<(bool Success, string Message, ApplicationUser? User)> CreateAdminWithReturnAsync(ApplicationUser user, string password, Guid createdById);
     Task<(bool Success, string Message)> UpdateUserAsync(ApplicationUser user);
     Task<(bool Success, string Message)> DeleteUserAsync(Guid id);
     Task<(bool Success, string Message)> ToggleUserStatusAsync(Guid id);
@@ -83,14 +84,53 @@ public class UserService : IUserService
         user.CreatedAt = DateTime.UtcNow;
         user.EmailConfirmed = true;
         user.AdminCode = code;
-        
+            
         var result = await _userManager.CreateAsync(user, password);
-        
+            
         if (result.Succeeded)
             return (true, $"Admin created successfully. Admin Code: {code}");
-            
+                
         var errors = string.Join(", ", result.Errors.Select(e => e.Description));
         return (false, errors);
+    }
+        
+    public async Task<(bool Success, string Message, ApplicationUser? User)> CreateAdminWithReturnAsync(ApplicationUser user, string password, Guid createdById)
+    {
+        // Check if email already exists
+        var existingUser = await _userManager.FindByEmailAsync(user.Email!);
+        if (existingUser != null)
+            return (false, "A user with this email already exists", null);
+            
+        // Generate unique admin code
+        var existingCodes = await _context.Users
+            .Where(u => u.AdminCode != null)
+            .Select(u => u.AdminCode!)
+            .ToListAsync();
+            
+        string code;
+        do
+        {
+            code = ApplicationUser.GenerateAdminCode();
+        } while (existingCodes.Contains(code));
+            
+        user.UserName = user.Email;
+        user.Role = UserRole.Admin;
+        user.CreatedById = createdById;
+        user.CreatedAt = DateTime.UtcNow;
+        user.EmailConfirmed = true;
+        user.AdminCode = code;
+            
+        var result = await _userManager.CreateAsync(user, password);
+            
+        if (result.Succeeded)
+        {
+            // Fetch the created user with all details
+            var createdUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+            return (true, $"Admin created successfully. Admin Code: {code}", createdUser);
+        }
+                
+        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+        return (false, errors, null);
     }
     
     public async Task<(bool Success, string Message)> UpdateUserAsync(ApplicationUser user)

@@ -597,7 +597,7 @@ else
         {
             _currentGame = await MultiplayerService.CreateGameAsync(_currentUser.Id, _gameName, _maxPlayers, _timePerQuestion);
             _players = new();
-            NavigationManager.NavigateTo($"/admin/multiplayer/host/{_currentGame.Id}", forceLoad: true);
+            NavigationManager.NavigateTo($"/admin/multiplayer/host/{_currentGame.Id}");
         }
         catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
         finally { _isCreating = false; }
@@ -716,7 +716,7 @@ else
     
     private async Task CopyJoinLink()
     {
-        try { await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", GetJoinLink()); Snackbar.Add("Link copied!", Severity.Success); }
+        try { await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", GetJoinLink()); /* Snackbar.Add("Link copied!", Severity.Success); */ }
         catch { Snackbar.Add("Could not copy", Severity.Warning); }
     }
 
