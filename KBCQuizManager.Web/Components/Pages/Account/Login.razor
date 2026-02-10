@@ -33,18 +33,12 @@
     .logo-icon {
         width: 80px;
         height: 80px;
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0 auto 20px;
-    }
-    
-    .logo-icon svg {
-        width: 40px;
-        height: 40px;
-        fill: white;
+        overflow: hidden;
     }
     
     .title-gradient {
@@ -150,13 +144,11 @@
     <div class="login-card">
         <!-- Logo -->
         <div class="logo-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/>
-            </svg>
+            <img src="/images/logo.png" alt="InternSpark" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>
         
         <!-- Title -->
-        <h1 class="title-gradient">InternsHub</h1>
+        <h1 class="title-gradient">InternSpark</h1>
         <p class="subtitle">Quiz Management & Gaming Platform</p>
         
         <div class="divider"></div>
@@ -240,7 +232,7 @@
         var isAuthenticated = await AuthService.IsAuthenticatedAsync();
         if (isAuthenticated)
         {
-            NavigationManager.NavigateTo("/");
+            NavigationManager.NavigateTo("/dashboard");
         }
     }
 }

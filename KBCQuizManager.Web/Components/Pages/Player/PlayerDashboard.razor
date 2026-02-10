@@ -4,7 +4,7 @@
 @inject IQuestionService QuestionService
 @inject NavigationManager NavigationManager
 
-<PageTitle>Player Dashboard - InternsHub</PageTitle>
+<PageTitle>Player Dashboard - InternSpark</PageTitle>
 
 @if (_currentUser != null)
 {
@@ -108,7 +108,7 @@
         
         if (_currentUser.Role != UserRole.Player)
         {
-            NavigationManager.NavigateTo("/");
+            NavigationManager.NavigateTo("/dashboard");
             return;
         }
         

@@ -32,8 +32,8 @@ else
             
             <div style="padding: 0 20px 20px; border-bottom: 1px solid #2a3f5f;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">IP</div>
-                    <span style="color: white; font-size: 18px; font-weight: bold;">InternsHub</span>
+                    <div style="width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;"><img src="/images/logo.png" alt="InternSpark" style="width: 100%; height: 100%; object-fit: contain;" /></div>
+                    <span style="color: white; font-size: 18px; font-weight: bold;">InternSpark</span>
                 </div>
             </div>
             
@@ -72,7 +72,7 @@ else
                 {
                     <!-- Admin Navigation -->
                     <div style="color: #6b7280; font-size: 11px; padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: 1px;">Menu</div>
-                    <a href="/" class="nav-link @(IsActive("/") ? "active" : "")" @onclick="CloseDrawer">📊 Dashboard</a>
+                    <a href="/dashboard" class="nav-link @(IsActive("/dashboard") ? "active" : "")" @onclick="CloseDrawer">📊 Dashboard</a>
                     
                     @if (_currentUser.Role == UserRole.SuperAdmin)
                     {
@@ -132,7 +132,11 @@ else
     protected override async Task OnInitializedAsync()
     {
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
-        if (uri.AbsolutePath != "/login" && !uri.AbsolutePath.StartsWith("/account"))
+        // Allow public pages without authentication
+        var publicPaths = new[] { "/", "/home", "/play-solo", "/join", "/register", "/login" };
+        var isPublicPath = publicPaths.Contains(uri.AbsolutePath) || uri.AbsolutePath.StartsWith("/account") || uri.AbsolutePath.StartsWith("/play/");
+        
+        if (!isPublicPath)
         {
             if (await AuthService.IsAuthenticatedAsync())
             {
@@ -143,6 +147,11 @@ else
                 NavigationManager.NavigateTo("/login");
                 return;
             }
+        }
+        else if (await AuthService.IsAuthenticatedAsync())
+        {
+            // Load user even on public pages if authenticated (for profile display, etc.)
+            _currentUser = await AuthService.GetCurrentUserAsync();
         }
         _isLoading = false;
     }
@@ -161,7 +170,7 @@ else
     private bool IsActive(string path)
     {
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
-        if (path == "/") return uri.AbsolutePath == "/";
+        if (path == "/dashboard") return uri.AbsolutePath == "/dashboard";
         return uri.AbsolutePath.StartsWith(path);
     }
 }

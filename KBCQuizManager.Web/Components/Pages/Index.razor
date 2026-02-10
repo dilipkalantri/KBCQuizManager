@@ -1,18 +1,18 @@
-@page "/"
+@page "/dashboard"
 @inject IAuthService AuthService
 @inject IQuestionService QuestionService
 @inject ICategoryService CategoryService
 @inject IGameService GameService
 @inject NavigationManager NavigationManager
 
-<PageTitle>Dashboard - InternsHub</PageTitle>
+<PageTitle>Dashboard - InternSpark</PageTitle>
 
 @if (_currentUser != null)
 {
     <!-- Welcome -->
     <div style="margin-bottom: 30px;">
         <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Welcome back, @_currentUser.FirstName! 👋</h1>
-        <p style="color: #9ca3af; margin: 0;">Here's your InternsHub management overview.</p>
+        <p style="color: #9ca3af; margin: 0;">Here's your InternSpark management overview.</p>
     </div>
     
     <!-- Stats Cards -->

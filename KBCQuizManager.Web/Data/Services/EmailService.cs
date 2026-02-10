@@ -68,7 +68,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendVerificationEmailAsync(string toEmail, string firstName, string verificationUrl)
     {
-        var subject = "Verify Your Email - InternsHub ";
+        var subject = "Verify Your Email - InternSpark ";
         var body = $@"
 <!DOCTYPE html>
 <html>
@@ -85,11 +85,11 @@ public class EmailService : IEmailService
 <body>
     <div class=""container"">
         <div class=""header"">
-            <h1>InternsHub Admin</h1>
+            <h1>InternSpark Admin</h1>
         </div>
         <div class=""content"">
             <h2>Hello {firstName}!</h2>
-            <p>Thank you for registering with Internshub. Please verify your email address by clicking the button below:</p>
+            <p>Thank you for registering with InternSpark. Please verify your email address by clicking the button below:</p>
             <p style=""text-align: center;"">
                 <a href=""{verificationUrl}"" class=""button"">Verify Email Address</a>
             </p>
@@ -110,7 +110,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendPasswordResetEmailAsync(string toEmail, string firstName, string resetUrl)
     {
-        var subject = "Reset Your Password - InternsHub";
+        var subject = "Reset Your Password - InternSpark";
         var body = $@"
 <!DOCTYPE html>
 <html>
@@ -128,7 +128,7 @@ public class EmailService : IEmailService
 <body>
     <div class=""container"">
         <div class=""header"">
-            <h1>InternsHub Admin</h1>
+            <h1>InternSpark Admin</h1>
         </div>
         <div class=""content"">
             <h2>Hello {firstName}!</h2>
